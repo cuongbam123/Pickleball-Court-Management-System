@@ -39,12 +39,6 @@ const branchSchema = new mongoose.Schema(
   }
 );
 
-// ================= INDEX =================
-
-// Index hỗ trợ tìm kiếm nhanh chi nhánh theo tên (mặc dù unique đã tự động tạo index, 
-// nhưng việc khai báo rõ ràng giúp dễ quản lý khi file lớn lên)
-branchSchema.index({ name: 1 });
-
 // ================= MODEL =================
 const Branch = mongoose.model("branches", branchSchema);
 
