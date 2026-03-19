@@ -62,8 +62,8 @@ const refreshToken = async (req, res) => {
 const logout = async (req, res) => {
   try {
     const { refresh_token } = req.body;
-
-    await authService.logout(refresh_token);
+    const userId = req.user.userId;
+    await authService.logout(refresh_token, userId);
 
     return res.status(200).json({
       success: true,

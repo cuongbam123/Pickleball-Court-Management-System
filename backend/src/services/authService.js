@@ -125,7 +125,7 @@ const refreshToken = async (oldRefreshToken) => {
   }
 
   const hashedToken = hashToken(oldRefreshToken);
-  const storedToken = await RefreshToken.findOne({ token: hashedToken });
+  const storedToken = await RefreshToken.findOneAndDelete({ token: hashedToken });
 
   if (!storedToken) {
     throw { status: 403, message: "Token không hợp lệ hoặc đã hết hạn" };
@@ -154,14 +154,17 @@ const refreshToken = async (oldRefreshToken) => {
 };
 
 //logout
-const logout = async (refreshToken) => {
+const logout = async (refreshToken, userId) => {
   if (!refreshToken) {
     throw { status: 400, message: "Refresh Token là bắt buộc" };
   }
 
   const hashedToken = hashToken(refreshToken);
   
-  const result = await RefreshToken.deleteOne({ token: hashedToken });
+  const result = await RefreshToken.deleteOne({ 
+    token: hashedToken,
+    user_id: userId,
+  });
 
   if (!result.deletedCount) {
     throw { status: 404, message: "Phiên đăng nhập không tồn tại hoặc đã hết hạn" };
