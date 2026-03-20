@@ -37,8 +37,48 @@ const login = async (req, res) => {
     });
   }
 };
+// cấp mới Token
+const refreshToken = async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
 
+    const data = await authService.refreshToken(refresh_token);
+
+    return res.status(200).json({
+      success: true,
+      message: "Cấp lại mã truy cập thành công",
+      data,
+    });
+  } catch (error) {
+    return res.status(error.status || 403).json({
+      success: false,
+      error_code: "REFRESH_TOKEN_FAILED",
+      message: error.message,
+    });
+  }
+};
+
+// logout
+const logout = async (req, res) => {
+  try {
+    const { refresh_token } = req.body;
+    const userId = req.user.userId;
+    await authService.logout(refresh_token, userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Đăng xuất thành công",
+    });
+  } catch (error) {
+    return res.status(error.status || 500).json({
+      success: false,
+      message: error.message || "Đăng xuất thất bại",
+    });
+  }
+};
 module.exports = {
   register,
   login,
+  refreshToken,
+  logout,
 };

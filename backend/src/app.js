@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require("morgan");
-
+const errorHandler = require("./middlewares/errorMiddleware");
 const authRoute = require("./routes/authRoute");
 
 const app = express();
@@ -17,14 +17,12 @@ app.get('/', (req, res) => {
     res.send(' API Pickleball đang hoạt động!');
 });
 
-
-//EẺERROR HANDLER
-app.use((err, req, res, next) => {
-  console.error(err);
-
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
+app.use((req, res, next) => {
+  const error = new Error("Route không tồn tại");
+  error.status = 404;
+  next(error);
 });
+
+
+app.use(errorHandler);
 module.exports = app;

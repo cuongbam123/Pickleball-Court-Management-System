@@ -1,10 +1,15 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/users");
-
+const RefreshToken = require('../models/token');
+const crypto = require('crypto');
 const SALT_ROUNDS = 10;
 
-const generateToken = (user) => {
+const hashToken = (token) => {
+  return crypto.createHash("sha256").update(token).digest("hex");
+};
+
+const generateAccessToken = (user) => {
   return jwt.sign(
     {
       userId: user._id,
@@ -12,10 +17,20 @@ const generateToken = (user) => {
     },
     process.env.JWT_SECRET,
     {
-      expiresIn: "1d",
+      expiresIn: "15m",
     },
   );
 };
+
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    {
+      userId: user._id,
+    },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: "7d" },
+  )
+}
 
 // dki
 const register = async ({ email, password, full_name }) => {
@@ -81,10 +96,17 @@ const login = async ({ email, password }) => {
   }
 
   //gen token
-  const token = generateToken(user);
-
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  const hashedToken = hashToken(refreshToken); // hash trước khi lưu
+  await RefreshToken.create({
+    user_id: user._id,
+    token: hashedToken,
+    expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
   return {
-    access_token: token,
+    access_token: accessToken,
+    refresh_token: refreshToken,
     user: {
       _id: user._id,
       email: user.email,
@@ -95,7 +117,66 @@ const login = async ({ email, password }) => {
   };
 };
 
+// refreshToken
+
+const refreshToken = async (oldRefreshToken) => {
+  if (!oldRefreshToken) {
+    throw { status: 401, message: "Không tìm thấy Refresh Token" };
+  }
+
+  const hashedToken = hashToken(oldRefreshToken);
+  const storedToken = await RefreshToken.findOneAndDelete({ token: hashedToken });
+
+  if (!storedToken) {
+    throw { status: 403, message: "Token không hợp lệ hoặc đã hết hạn" };
+  }
+
+  try {
+    const decoded = jwt.verify(oldRefreshToken, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.userId);
+    if (!user) throw new Error();
+
+    await storedToken.deleteOne();
+
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+
+    await RefreshToken.create({
+      user_id: user._id,
+      token: hashToken(newRefreshToken),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+  } catch (err) {
+    throw { status: 403, message: "Phiên đăng nhập hết hạn" };
+  }
+};
+
+//logout
+const logout = async (refreshToken, userId) => {
+  if (!refreshToken) {
+    throw { status: 400, message: "Refresh Token là bắt buộc" };
+  }
+
+  const hashedToken = hashToken(refreshToken);
+  
+  const result = await RefreshToken.deleteOne({ 
+    token: hashedToken,
+    user_id: userId,
+  });
+
+  if (!result.deletedCount) {
+    throw { status: 404, message: "Phiên đăng nhập không tồn tại hoặc đã hết hạn" };
+  }
+
+  return true;
+};
+
+
 module.exports = {
   register,
   login,
+  refreshToken,
+  logout,
 };
