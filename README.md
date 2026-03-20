@@ -19,11 +19,11 @@ Hệ thống xoay quanh 3 nhóm người dùng chính:
 → Hỗ trợ thời gian đệm (Buffer time): Tự động cộng thêm 5-10 phút giữa 2 ca để dọn sân (không khóa hẳn 1 tiếng).
 → Nghiệp vụ Sân ghép (Sân 10 người/Hỗn hợp): Chỉ Admin/Lễ tân mới có quyền tạo "Ca chơi ghép". Khách hàng nhìn thấy ca này trên web và mua "Vé lẻ" (tối đa 10 vé/ca).
 → Hủy đặt sân: Cho phép khách hủy trước X giờ (do admin cài đặt) để được hoàn cọc/lưu cọc.
-Module 4: POS & Thanh toán (Billing & POS)
+# Module 4: POS & Thanh toán (Billing & POS)
 → Bán lẻ/Dịch vụ: Tích hợp giao diện POS tại quầy cho Lễ tân để bán nước, bóng, cho thuê vợt, thuê giày... cộng dồn vào hóa đơn tiền sân.
 → Tính tiền & Trả sân: Hệ thống tự động tính: (Tiền thuê sân + Tiền dịch vụ POS) - Tiền cọc = Tổng cần thu.
 → Thanh toán: Tích hợp cổng thanh toán online (VNPay/Momo/Chuyển khoản QR code) cho việc Đặt cọc và Thanh toán tại quầy.
-Module 5: Cấp bậc & Chăm sóc khách hàng (Loyalty & Ranking System)
+# Module 5: Cấp bậc & Chăm sóc khách hàng (Loyalty & Ranking System)
 → Hệ thống Điểm thành viên (Loyalty Points): Tích lũy dựa trên số tiền chi tiêu (thuê sân, mua nước). Dùng để đổi voucher hoặc nâng hạng thẻ (Bạc, Vàng, Kim Cương) để nhận chiết khấu.
 → Hệ thống Hạng kỹ năng (Skill Rank): Chia làm 4 hạng (VD: D - Tập sự, C - Phong trào, B - Bán chuyên, A - Chuyên nghiệp). Hạng này không tăng qua việc thuê sân, mà chỉ được cập nhật qua 2 cách:
 - Admin đánh giá và thiết lập thủ công (Khi khách đến test trình độ).
