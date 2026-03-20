@@ -30,6 +30,12 @@ const refreshTokenSchema = Joi.object({
     "any.required": "Refresh token là bắt buộc để thực hiện thao tác này",
   }),
 });
+const updateProfile = joi.object({
+  full_name: Joi.string().min(2).max(100).required().messages({
+    "any.required": "Họ tên là bắt buộc",
+  }),
+  phone: Joi.string().allow('', null),
+})
 module.exports = {
   registerSchema,
   loginSchema,

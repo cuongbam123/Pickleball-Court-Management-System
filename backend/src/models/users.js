@@ -29,6 +29,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    phone: {
+      type: String,
+      unique: true,
+      trime: true,
+    },
     branch_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "branches",
