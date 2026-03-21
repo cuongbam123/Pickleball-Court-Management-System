@@ -34,24 +34,65 @@ class UserController {
 
   // PUT /users/:id
   async updateUser(req, res, next) {
-  try {
-    // console.log("Data dc giai ma: ", req.user);
-    const user = await userService.updateUser(
-      req.params.id,
-      req.body,
-      req.user
-    );
+    try {
+      // console.log("Data dc giai ma: ", req.user);
+      const user = await userService.updateUser(
+        req.params.id,
+        req.body,
+        req.user,
+      );
 
-    return res.status(200).json({
-      success: true,
-      message: "Cập nhật người dùng thành công",
-      data: user,
-    });
-  } catch (err) {
-    next(err);
+      return res.status(200).json({
+        success: true,
+        message: "Cập nhật người dùng thành công",
+        data: user,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
-}
+  // PATCH /users/:id/rank
+  async updateUserRank(req, res, next) {
+    try {
+      const { skill_rank, elo_score } = req.body;
+
+      // Gọi service, truyền vào id cần sửa, giá trị rank mới và thông tin người đang thao tác (req.user)
+      const user = await userService.updateUserRank(
+        req.params.id,
+        { skill_rank, elo_score },
+        req.user,
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Cập nhật hạng kỹ năng người chơi thành công",
+        data: {
+          _id: user._id,
+          full_name: user.full_name,
+          skill_rank: user.skill_rank,
+          elo_score: user.elo_score
+        },
+      });
+    } catch (err) {
+      next(err); // Đẩy lỗi qua Error Middleware xử lý chung
+    }
+  }
+
+  // DELETE /users/:id
+  async deleteUser(req, res, next) {
+    try {
+      // Gọi service thực hiện xóa mềm
+      await userService.deleteUser(req.params.id, req.user);
+
+      return res.status(200).json({
+        success: true,
+        message: "Đã Khoóa tài khoản thành công",
+        data: null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
 
 }
-
 module.exports = new UserController();
