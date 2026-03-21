@@ -12,6 +12,8 @@ const {
   getUsers,
   getUserById,
   updateUser,
+  updateUserRank,
+  deleteUser,
 } = require("../validations/userValidation");
 
 // endpoints
@@ -39,4 +41,19 @@ router.put(
   userController.updateUser,
 );
 
+router.patch(
+  "/:id/rank",
+  authenticate,
+  authorizeRoles("admin", "staff"),
+  validate(updateUserRank),
+  userController.updateUserRank,
+);
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles("admin"),
+  validate(deleteUser),
+  userController.deleteUser,
+);
 module.exports = router;

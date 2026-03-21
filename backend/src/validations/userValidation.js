@@ -43,8 +43,28 @@ const updateUser = {
   }),
 };
 
+//update rank
+const updateUserRank = {
+  params: Joi.object({
+    id: Joi.string().custom(objectId).required(),
+  }),
+  body: Joi.object({
+    skill_rank: Joi.string().valid("D", "C", "B", "A").required(),
+    elo_score: Joi.number().min(0).required(),
+  }),
+};
+
+//xoa usser nhma van luu db de truy van
+const deleteUser = {
+  params: Joi.object({
+    id: Joi.string().custom(objectId).required(),
+  }),
+};
+
 module.exports = {
   getUsers,
   getUserById,
   updateUser,
+  updateUserRank,
+  deleteUser,
 };

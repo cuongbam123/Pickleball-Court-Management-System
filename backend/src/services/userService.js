@@ -41,7 +41,7 @@ class UserService {
       is_deleted: false,
     }).select("-password");
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
 
     return user;
   }
@@ -53,7 +53,7 @@ class UserService {
       is_deleted: false,
     });
 
-    if (!user) throw new Error("User not found");
+    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
 
     if (
       currentUser.userId.toString() === id &&
@@ -100,6 +100,75 @@ class UserService {
 
     return newValue;
   }
+
+  //up rank
+ async updateUserRank(id, payload, currentUser) {
+    const user = await User.findOne({
+      _id: id,
+      is_deleted: false,
+    });
+
+    if (!user) {
+      throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
+    }
+
+    //luu log trước khi update
+    const oldValue = user.toObject();
+
+    //up rank và elo lưu vào db
+    user.skill_rank = payload.skill_rank;
+    user.elo_score = payload.elo_score;
+    await user.save();
+
+    const newValue = user.toObject();
+
+    //luu log vào AuditLog
+    await AuditLog.create({
+      action: "update_user_rank",
+      user_id: currentUser.userId,
+      target_collection: "users",
+      target_id: user._id,
+      old_value: oldValue,
+      new_value: newValue,
+    });
+
+    return newValue;
+  }
+
+  //xoa user nhung van luu db de truy van va log
+  async deleteUser(id, currentUser) {
+    //tim úuser
+    const user = await User.findOne({
+      _id: id,
+      is_deleted: false,
+    });
+
+    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị xóa từ trước");
+    if (currentUser.userId.toString() === id) {
+      throw new Error("Bạn không thể tự xóa tài khoản của chính mình");
+    }
+
+    //luu log trước khi xóa
+    const oldValue = user.toObject();
+    //xoa mem
+    user.is_deleted = true;
+    await user.save();
+
+    const newValue = user.toObject();
+
+    //luu log
+    await AuditLog.create({
+      action: "delete_user",
+      user_id: currentUser.userId, //luu nguoi xoa
+      target_collection: "users",
+      target_id: user._id,
+      old_value: oldValue,
+      new_value: newValue, //doi trang thai da xoa is_deleted = true
+    });
+
+    return true;
+  }
+
 }
 
 module.exports = new UserService();
