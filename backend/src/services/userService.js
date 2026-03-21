@@ -1,6 +1,6 @@
 const User = require("../models/users");
 const AuditLog = require("../models/audit_logs");
-
+const bcrypt = require("bcrypt");
 class UserService {
   //lấy danh sách user
   async getUsers(query) {
@@ -168,7 +168,115 @@ class UserService {
 
     return true;
   }
+// get me
+  async getMe(currentUser) {
+  const user = await User.findOne({
+    _id: currentUser.userId,
+    is_deleted: false,
+  }).select("-password");
 
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
+  }
+  //log thiếu phone
+   return {
+    _id: user._id,
+    email: user.email,
+    full_name: user.full_name,
+    loyalty_points: user.loyalty_points,
+    loyalty_tier: user.loyalty_tier,
+    skill_rank: user.skill_rank,
+    elo_score: user.elo_score,
+    createdAt: user.createdAt,
+  };
+}
+  //updateMe
+  async updateMe(currentUser, payload) {
+  const user = await User.findOne({
+    _id: currentUser.userId,
+    is_deleted: false,
+  });
+
+  if (!user) {
+    const error = new Error("Không tìm thấy người dùng");
+    error.status = 404;
+    throw error;
+  }
+
+  const oldValue = user.toObject();
+//changePass
+if (payload.old_password && payload.new_password) {
+    const isMatch = await bcrypt.compare(
+      payload.old_password,
+      user.password
+    );
+
+    if (!isMatch) {
+      const error = new Error("Mật khẩu cũ không đúng");
+      error.status = 400;
+      throw error;
+    }
+
+    const isSame = await bcrypt.compare(
+      payload.new_password,
+      user.password
+    );
+
+    if (isSame) {
+      const error = new Error("Mật khẩu mới không được trùng mật khẩu cũ");
+      error.status = 400;
+      throw error;
+    }
+
+    const hashed = await bcrypt.hash(payload.new_password, 10);
+    user.password = hashed;
+
+    await user.save();
+//log
+    await AuditLog.create({
+      action: "change_password",
+      user_id: currentUser.userId,
+      target_collection: "users",
+      target_id: user._id,
+      old_value: { password: "******" },
+      new_value: { password: "******" },
+    });
+
+    return { message: "Đổi mật khẩu thành công" };
+  }
+  // update Profile (thiếu phone)
+  const allowedFields = ["full_name"];
+
+  allowedFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      user[field] = payload[field];
+    }
+  });
+
+  await user.save();
+
+  const newValue = user.toObject();
+  delete newValue.password;
+  await AuditLog.create({
+    action: "update_profile",
+    user_id: currentUser.userId,
+    target_collection: "users",
+    target_id: user._id,
+    old_value: oldValue,
+    new_value: newValue,
+  });
+
+  return {
+    _id: user._id,
+    email: user.email,
+    full_name: user.full_name,
+    loyalty_points: user.loyalty_points,
+    loyalty_tier: user.loyalty_tier,
+    skill_rank: user.skill_rank,
+    elo_score: user.elo_score,
+    createdAt: user.createdAt,
+  };
+}
 }
 
 module.exports = new UserService();

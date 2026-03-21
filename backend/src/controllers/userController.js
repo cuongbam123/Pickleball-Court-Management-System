@@ -93,6 +93,40 @@ class UserController {
       next(err);
     }
   }
+  //GET /users/me
+  async getMe(req, res, next) {
+  try {
+    const user = await userService.getMe(req.user);
 
+    return res.status(200).json({
+      success: true,
+      message: "Lấy thông tin thành công",
+      data: user,
+    });
+  } catch (err) {
+    next(err);
+  }
+  }
+  //PUT /users/me
+  async updateMe(req, res, next) {
+  try {
+    const result = await userService.updateMe(req.user, req.body);
+    //changePass
+    if (result?.type === "change_password") {
+      return res.status(200).json({
+        success: true,
+        message: "Đổi mật khẩu thành công",
+      });
+    }
+    // update
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật thông tin thành công",
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+  }
 }
 module.exports = new UserController();

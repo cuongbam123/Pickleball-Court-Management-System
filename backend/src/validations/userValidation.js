@@ -60,11 +60,24 @@ const deleteUser = {
     id: Joi.string().custom(objectId).required(),
   }),
 };
+//updateMe
+const updateMe = {
+  body: Joi.object({
+    full_name: Joi.string().min(2).max(255),
+    phone: Joi.string().pattern(/^[0-9]{9,11}$/),
 
+    old_password: Joi.string(),
+    new_password: Joi.string().min(6),
+  })
+    .or("full_name", "phone", "old_password")
+    .with("old_password", "new_password")
+    .with("new_password", "old_password"),
+};
 module.exports = {
   getUsers,
   getUserById,
   updateUser,
   updateUserRank,
   deleteUser,
+  updateMe,
 };
