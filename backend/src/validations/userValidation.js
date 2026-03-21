@@ -67,11 +67,24 @@ const updateMe = {
     phone: Joi.string().pattern(/^[0-9]{9,11}$/),
 
     old_password: Joi.string(),
-    new_password: Joi.string().min(6),
+
+    new_password: Joi.string()
+      .min(6)
+      .invalid(Joi.ref("old_password")) 
+      .messages({
+        "any.invalid": "Mật khẩu mới không được trùng với mật khẩu cũ",
+      }),
+
+    confirm_new_password: Joi.string()
+      .valid(Joi.ref("new_password"))
+      .messages({
+        "any.only": "Xác nhận mật khẩu mới không khớp",
+      }),
   })
-    .or("full_name", "phone", "old_password")
+    .or("full_name", "phone", "old_password") 
     .with("old_password", "new_password")
-    .with("new_password", "old_password"),
+    .with("new_password", "old_password")
+    .with("new_password", "confirm_new_password"),
 };
 module.exports = {
   getUsers,
