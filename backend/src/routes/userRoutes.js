@@ -14,9 +14,22 @@ const {
   updateUser,
   updateUserRank,
   deleteUser,
+  updateMe,
 } = require("../validations/userValidation");
 
 // endpoints
+router.get(
+  "/me",
+  authenticate,
+  userController.getMe
+);
+router.put(
+  "/me",
+  authenticate,
+  validate(updateMe),
+  userController.updateMe
+);
+
 router.get(
   "/",
   authenticate,
