@@ -8,20 +8,38 @@ const {
   createBranch,
   getBranches,
   getBranchById,
+  updateBranch,
+  deleteBranch,
 } = require("../validations/branchValidation");
 
-// PUBLIC
+//PUBLIC
 router.get("/", validate(getBranches), branchController.getBranches);
 
 router.get("/:id", validate(getBranchById), branchController.getBranchById);
 
-// ADMIN
+//ADMIN
 router.post(
   "/",
   authenticate,
   authorizeRoles("admin"),
   validate(createBranch),
   branchController.createBranch,
+);
+
+router.put(
+  "/:id",
+  authenticate,
+  authorizeRoles("admin"),
+  validate(updateBranch),
+  branchController.updateBranch,
+);
+
+router.delete(
+  "/:id",
+  authenticate,
+  authorizeRoles("admin"),
+  validate(deleteBranch),
+  branchController.deleteBranch,
 );
 
 module.exports = router;

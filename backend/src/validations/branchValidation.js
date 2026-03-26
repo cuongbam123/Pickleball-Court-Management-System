@@ -33,8 +33,31 @@ const getBranchById = {
   }),
 };
 
+// UPDATE
+const updateBranch = {
+  params: Joi.object({
+    id: Joi.string().hex().length(24).required(),
+  }),
+  body: Joi.object({
+    name: Joi.string().trim().min(3),
+    address: Joi.string().allow("", null),
+    hotline: Joi.string().pattern(/^[0-9]{9,11}$/),
+    open_time: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/),
+    close_time: Joi.string().pattern(/^([01]\d|2[0-3]):([0-5]\d)$/),
+  }).min(1), // Đảm bảo body phải có ít nhất 1 trường để update, không được rỗng
+};
+
+// DELETE
+const deleteBranch = {
+  params: Joi.object({
+    id: Joi.string().hex().length(24).required(),
+  }),
+};
+
 module.exports = {
   createBranch,
   getBranches,
   getBranchById,
+  updateBranch,
+  deleteBranch,
 };
