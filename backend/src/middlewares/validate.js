@@ -1,18 +1,22 @@
 const validate = (schema) => {
   return (req, res, next) => {
     const errors = [];
-    if (schema.params) {
-      const { error } = schema.params.validate(req.params, { abortEarly: false });
-      if (error) errors.push(...error.details.map((e) => e.message));
-    }
-    if (schema.query) {
-      const { error } = schema.query.validate(req.query, { abortEarly: false });
-      if (error) errors.push(...error.details.map((e) => e.message));
-    }
-    if (schema.body) {
-      const { error } = schema.body.validate(req.body, { abortEarly: false });
-      if (error) errors.push(...error.details.map((e) => e.message));
-    }
+    ["params", "query", "body"].forEach((key) => {
+      if (schema[key]) {
+        // Chú ý: Lấy cả value đã được Joi format
+        const { error, value } = schema[key].validate(req[key], {
+          abortEarly: false,
+          stripUnknown: true,
+        });
+
+        if (error) {
+          errors.push(...error.details.map((e) => e.message));
+        } else {
+          // Gán ngược dữ liệu đã chuẩn hóa vào request
+          req[key] = value;
+        }
+      }
+    });
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
