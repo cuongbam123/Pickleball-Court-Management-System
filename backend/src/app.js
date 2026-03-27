@@ -5,7 +5,7 @@ const errorHandler = require("./middlewares/errorMiddleware");
 const authRoute = require("./routes/authRoute");
 const userRoute = require("./routes/userRoutes");
 const branchRoute = require("./routes/branchRoutes");
-
+const pricingRuleRoute = require("./routes/pricingRuleRoutes");
 const app = express();
 
 // middlewares
@@ -16,6 +16,7 @@ app.use(morgan("dev"));
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/branches", branchRoute);
+app.use("/api/v1/pricing-rules", pricingRuleRoute);
 
 app.get('/', (req, res) => {
     res.send(' API Pickleball đang hoạt động!');
