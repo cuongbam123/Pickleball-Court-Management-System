@@ -103,7 +103,6 @@ const createPricingRule = async (payload) => {
     end_time,
     price_per_hour,
   });
-  delete newRule.branch_id;
   return newRule;
 };
 

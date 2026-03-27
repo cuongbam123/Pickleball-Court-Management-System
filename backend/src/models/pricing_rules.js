@@ -55,15 +55,17 @@ const pricingRuleSchema = new mongoose.Schema(
 // (Nếu sau này bạn thêm branch_id, hãy nhớ cho thêm branch_id: 1 vào đầu index này nhé)
 pricingRuleSchema.index(
   {
+    branch_id: 1,
     court_type: 1,
     day_type: 1,
-    time_type: 1,
     start_time: 1,
     end_time: 1,
   },
-  { unique: true }
+  {
+    unique: true,
+    partialFilterExpression: { is_deleted: false },
+  }
 );
-
 // ================= MODEL =================
 const PricingRule = mongoose.model("pricing_rules", pricingRuleSchema);
 
