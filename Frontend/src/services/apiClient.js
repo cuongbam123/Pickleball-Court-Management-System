@@ -20,10 +20,10 @@ const processQueue = (error, token = null) => {
 // REQUEST
 apiClient.interceptors.request.use(
   (config) => {
-    const { accessToken } = useAuthStore.getState();
+    const { access_token } = useAuthStore.getState();
 
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (access_token) {
+      config.headers.Authorization = `Bearer ${access_token}`;
     }
 
     return config;
@@ -37,7 +37,7 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    const { refreshToken, setAccessToken, clearAuth } =
+    const { refresh_token, setAccessToken, clearAuth } =
       useAuthStore.getState();
 
     // ❌ network error
@@ -70,13 +70,13 @@ apiClient.interceptors.response.use(
     try {
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/v1/auth/refreshToken`,
-        { refreshToken }
+        { refresh_token }
       );
 
-      const newToken = res?.data?.accessToken;
+      const newToken = res?.data?.access_token;
 
       if (!newToken) throw new Error("Invalid refresh");
-
+      
       setAccessToken(newToken);
 
       processQueue(null, newToken);

@@ -31,21 +31,21 @@ const LoginForm = () => {
 
       const res = await loginApi(form);
       const data = res.data.data;
-      const accessToken = data.access_token;
+      const access_token = data.access_token;
+      const refresh_token = data.refresh_token;
       const user = data.user;
       
-      if (!accessToken || !user || !user.role) {
+      if (!access_token || !user || !user.role) {
         throw new Error("Invalid response");
       }
 
       setAuth({
         user: data.user,
-        accessToken: accessToken,
-        // refreshToken: data.refreshToken,
-        refreshToken: null,
+        access_token: access_token,
+        refresh_token: refresh_token,
       });
 
-      switch (user.role) {
+      switch (user.role) {  
         case "admin":
           navigate("/admin", { replace: true });
           break;
