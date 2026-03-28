@@ -3,6 +3,7 @@ import LoginPage from "../pages/auth/LoginPage";
 import RegisterPage from "../pages/auth/RegisterPage";
 import ProtectedRoute from "./ProtectedRoute";
 import LogoutPage from "../pages/auth/LogoutPage";
+import TestUI from "../pages/TestUI";
 
 const AppRoutes = () => {
   return (
@@ -22,6 +23,7 @@ const AppRoutes = () => {
         />
 
         <Route path="/" element={<div>Home</div>} />
+        <Route path="/test" element={<TestUI />} />
       </Routes>
     </BrowserRouter>
   );
