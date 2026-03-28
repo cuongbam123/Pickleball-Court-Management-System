@@ -3,6 +3,11 @@ const router = express.Router();
 
 const branchController = require("../controllers/branchController");
 const { validate, authenticate, authorizeRoles } = require("../middlewares");
+const courtController = require("../controllers/courtController");
+const {
+  getCourtsByBranch,
+  createCourt,
+} = require("../validations/courtValidation");
 
 const {
   createBranch,
@@ -40,6 +45,22 @@ router.delete(
   authorizeRoles("admin"),
   validate(deleteBranch),
   branchController.deleteBranch,
+);
+
+//api saân thuoc chi nhanh
+router.get(
+  "/:branchId/courts",
+  validate(getCourtsByBranch),
+  courtController.getCourtsByBranch,
+);
+
+// ADMIN
+router.post(
+  "/:branchId/courts",
+  authenticate,
+  authorizeRoles("admin"),
+  validate(createCourt),
+  courtController.createCourt,
 );
 
 module.exports = router;

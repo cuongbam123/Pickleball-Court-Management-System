@@ -6,6 +6,7 @@ const authRoute = require("./routes/authRoute");
 const userRoute = require("./routes/userRoutes");
 const branchRoute = require("./routes/branchRoutes");
 const pricingRuleRoute = require("./routes/pricingRuleRoutes");
+const courtRoutes = require("./routes/courtRoutes");
 const app = express();
 
 // middlewares
@@ -17,6 +18,7 @@ app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/branches", branchRoute);
 app.use("/api/v1/pricing-rules", pricingRuleRoute);
+app.use("/api/v1/courts", courtRoutes)
 
 app.get('/', (req, res) => {
     res.send(' API Pickleball đang hoạt động!');
