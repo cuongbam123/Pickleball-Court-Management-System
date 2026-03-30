@@ -41,11 +41,8 @@ const productSchema = new mongoose.Schema(
 
 // ================= INDEX =================
 
-// Đảm bảo không trùng tên sản phẩm trong cùng một chi nhánh
-// Đồng thời phục vụ luôn cho các query chỉ tìm theo branch_id (Left-Prefix Rule)
 productSchema.index({ branch_id: 1, name: 1 }, { unique: true });
 
-// Lọc sản phẩm theo loại trong một chi nhánh cụ thể (Truy vấn phổ biến nhất ở quầy POS)
 productSchema.index({ branch_id: 1, type: 1 });
 
 // Lọc và sắp xếp theo giá
