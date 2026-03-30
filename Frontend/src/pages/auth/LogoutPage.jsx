@@ -6,11 +6,14 @@ import { useAuthStore } from "../../store/authStore";
 const LogoutPage = () => {
   const navigate = useNavigate();
   const clearAuth = useAuthStore((s) => s.clearAuth);
+  const refresh_token = useAuthStore((s) => s.refresh_token);
 
   useEffect(() => {
     const handleLogout = async () => {
       try {
-        await logoutApi();
+        if (refresh_token) {
+          await logoutApi(refresh_token);
+        }
       } catch (err) {
         console.error("LOGOUT ERROR:", err);
       } finally {
@@ -20,13 +23,12 @@ const LogoutPage = () => {
     };
 
     handleLogout();
-  }, [clearAuth, navigate]);
+  }, [clearAuth, navigate, refresh_token]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">
-         Đang đăng xuất...
+      Đang đăng xuất...
     </div>
-
   );
 };
 

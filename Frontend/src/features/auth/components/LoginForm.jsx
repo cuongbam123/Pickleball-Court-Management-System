@@ -3,7 +3,7 @@ import { loginApi } from "../api/authApi";
 import { useAuthStore } from "../../../store/authStore";
 import { useNavigate } from "react-router-dom";
 
-const LoginForm = () => { 
+const LoginForm = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((s) => s.setAuth);
 
@@ -34,7 +34,7 @@ const LoginForm = () => {
       const access_token = data.access_token;
       const refresh_token = data.refresh_token;
       const user = data.user;
-      
+
       if (!access_token || !user || !user.role) {
         throw new Error("Invalid response");
       }
@@ -45,17 +45,23 @@ const LoginForm = () => {
         refresh_token: refresh_token,
       });
 
-      switch (user.role) {  
+      switch (user.role) {
+        // case "admin":
+        //   navigate("/admin", { replace: true });
+        //   break;
+
+        // case "staff":
+        //   navigate("/staff", { replace: true });
+        //   break;
+
+        // case "customer":
+        //   navigate("/", { replace: true });
+        //   break;
+        //fix lai xiu nha
         case "admin":
-          navigate("/admin", { replace: true });
-          break;
-
         case "staff":
-          navigate("/staff", { replace: true });
-          break;
-
         case "customer":
-          navigate("/", { replace: true });
+          navigate("/home", { replace: true });
           break;
 
         default:
@@ -64,7 +70,7 @@ const LoginForm = () => {
       }
     } catch (err) {
       console.error("LOGIN ERROR:", err);
-       alert(err?.message || "Đăng nhập thất bại");
+      alert(err?.message || "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }
@@ -101,7 +107,10 @@ const LoginForm = () => {
       {/* Form xử lý */}
       <form onSubmit={handleLogin} className="space-y-5">
         <div>
-          <label htmlFor="email" className="mb-2 block text-sm font-semibold text-zinc-700">
+          <label
+            htmlFor="email"
+            className="mb-2 block text-sm font-semibold text-zinc-700"
+          >
             Email
           </label>
           <input
@@ -116,7 +125,10 @@ const LoginForm = () => {
         </div>
 
         <div>
-          <label htmlFor="password" className="mb-2 block text-sm font-semibold text-zinc-700">
+          <label
+            htmlFor="password"
+            className="mb-2 block text-sm font-semibold text-zinc-700"
+          >
             Mật khẩu
           </label>
           <input
@@ -140,7 +152,10 @@ const LoginForm = () => {
 
         <p className="text-center text-sm text-zinc-500">
           Chưa có tài khoản?{" "}
-          <a href="/register" className="font-semibold text-lime-600 hover:text-lime-500 transition">
+          <a
+            href="/register"
+            className="font-semibold text-lime-600 hover:text-lime-500 transition"
+          >
             Đăng ký ngay
           </a>
         </p>
