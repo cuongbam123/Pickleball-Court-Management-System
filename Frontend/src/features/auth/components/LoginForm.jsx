@@ -34,6 +34,7 @@ const LoginForm = () => {
       const access_token = data.access_token;
       const refresh_token = data.refresh_token;
       const user = data.user;
+      console.log("LOGIN SUCCESS:", data);
 
       if (!access_token || !user || !user.role) {
         throw new Error("Invalid response");

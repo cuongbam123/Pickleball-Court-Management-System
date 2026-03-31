@@ -120,8 +120,6 @@ const ProfileForm = () => {
         refresh_token,
       });
 
-      setAuth(newUser);
-
       alert(data?.message || "Cập nhật thông tin thành công");
 
       setPasswordForm(initialPasswordForm);
