@@ -83,13 +83,11 @@ const orderSchema = new mongoose.Schema(
     },
     webhook_transaction_id: {
       type: String,
-      default: null,
       unique: true, // Ngăn lặp lại mã giao dịch từ webhook
       sparse: true, // Cho phép null, nhưng nếu có thì không được trùng
     },
     idempotency_key: {
       type: String,
-      default: null,
       unique: true, // Ngăn client gọi API thanh toán 2 lần
       sparse: true, 
     },

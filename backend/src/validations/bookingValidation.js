@@ -37,11 +37,11 @@ const holdBookingValidation = {
       "string.empty": "branch_id là bắt buộc",
       "string.pattern.base": "branch_id không hợp lệ",
     }),
-    start_time: Joi.date().iso().required().messages({
+    start_time: Joi.string().isoDate().required().messages({
       "any.required": "start_time là bắt buộc",
       "date.format": "start_time phải là ISO date",
     }),
-    end_time: Joi.date().iso().required().messages({
+    end_time: Joi.string().isoDate().required().messages({
       "any.required": "end_time là bắt buộc",
       "date.format": "end_time phải là ISO date",
     }),
@@ -54,6 +54,12 @@ const holdBookingValidation = {
     booking_type: Joi.string()
       .valid("standard", "shared_match")
       .default("standard"),
+  }).custom((value, helpers) => {
+    // Custom check so sánh 2 chuỗi ISO 
+    if (value.start_time >= value.end_time) {
+      return helpers.message("end_time phải lớn hơn start_time");
+    }
+    return value;
   }),
 };
 

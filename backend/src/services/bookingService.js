@@ -1,14 +1,17 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
+const { parseISO, isValid, isBefore } = require("date-fns");
+const { format, toZonedTime } = require("date-fns-tz");
 const Booking = require("../models/bookings");
 const Court = require("../models/court");
 const PricingRule = require("../models/pricing_rules");
+const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
 
-  const startOfDay = new Date(`${date}T00:00:00.000`);
-  const endOfDay = new Date(`${date}T23:59:59.999`);
+  const startOfDay = fromZonedTime(`${date}T00:00:00`, TIMEZONE); 
+  const endOfDay = fromZonedTime(`${date}T23:59:59.999`, TIMEZONE);
 
   if (isNaN(startOfDay.getTime()) || isNaN(endOfDay.getTime())) {
     const error = new Error("date không hợp lệ");
@@ -73,22 +76,23 @@ const getBookings = async (query, user) => {
 const holdBooking = async (body, user) => {
   const { court_id, branch_id, start_time, end_time, booking_type, buffer_time = 10 } = body;
 
-  const start = new Date(start_time);
-  const end = new Date(end_time);
+  const start = parseISO(start_time);
+  const end = parseISO(end_time);
+  const now = new Date();
 
-  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+  if (!isValid(start) || !isValid(end)) {
     const error = new Error("start_time hoặc end_time không hợp lệ");
     error.statusCode = 400;
     throw error;
   }
 
-  if (start >= end) {
+  if (!isBefore(start, end)) {
     const error = new Error("start_time phải nhỏ hơn end_time");
     error.statusCode = 400;
     throw error;
   }
 
-  if (start < new Date()) {
+  if (isBefore(start, now)) {
     const error = new Error("Không thể giữ chỗ trong quá khứ");
     error.statusCode = 400;
     throw error;
@@ -120,15 +124,23 @@ const holdBooking = async (body, user) => {
   while (currentStart < end) {
     const currentEnd = new Date(currentStart);
     currentEnd.setHours(23, 59, 59, 999);
-    const endOfSegment = end < currentEnd ? end : currentEnd;
+    const endOfSegment = isBefore(end, currentEnd) ? end : currentEnd;
 
     // ktr type
-    const dayOfWeek = currentStart.getDay(); 
-    const dayType = (dayOfWeek === 0 || dayOfWeek === 6) ? "weekend" : "weekday";
+    const dayOfWeekStr = format(currentStart, "i", { timeZone: TIMEZONE });
+    const dayOfWeek = parseInt(dayOfWeekStr, 10);
+    const dayType = (dayOfWeek === 6 || dayOfWeek === 7) ? "weekend" : "weekday";
 
     const dailyRules = rules.filter((r) => r.day_type === dayType);
-    const startMins = currentStart.getHours() * 60 + currentStart.getMinutes();
-    const endMins = endOfSegment.getHours() * 60 + endOfSegment.getMinutes() + (endOfSegment.getSeconds() > 0 ? 1 : 0);
+
+    const startH = parseInt(format(currentStart, "HH", { timeZone: TIMEZONE }), 10);
+    const startM = parseInt(format(currentStart, "mm", { timeZone: TIMEZONE }), 10);
+    const startMins = startH * 60 + startM;
+
+    const endH = parseInt(format(endOfSegment, "HH", { timeZone: TIMEZONE }), 10);
+    const endM = parseInt(format(endOfSegment, "mm", { timeZone: TIMEZONE }), 10);
+    const endSeconds = parseInt(format(endOfSegment, "ss", { timeZone: TIMEZONE }), 10);
+    const endMins = endH * 60 + endM + (endSeconds > 0 ? 1 : 0);
 
     let dayCalculatedMins = 0;
     // loop con overlap
@@ -162,16 +174,20 @@ const holdBooking = async (body, user) => {
     currentStart = new Date(currentEnd.getTime() + 1);
   }
 
- const total_court_price = Math.round(totalPrice);
+  const total_court_price = Math.round(totalPrice);
   const deposit_amount = Math.round(total_court_price * 0.5); 
   const hold_token = crypto.randomUUID();
   const expires_at = new Date(Date.now() + 10 * 60 * 1000);
 
   // khách vãng lai hoặc customer phải chờ thanh toán cọc
+  let initialPaymentStatus = "pending_deposit";
+  let initialDepositPaid = 0;
   let initialStatus = "holding";
   let finalHoldToken = hold_token;
 
   if (user.role === "admin" || user.role === "staff") {
+    initialPaymentStatus = "deposit_paid";
+    initialDepositPaid = deposit_amount;
     initialStatus = "deposited"; 
     finalHoldToken = null;
   }
@@ -183,7 +199,6 @@ const holdBooking = async (body, user) => {
 
   try {
     let createdBooking = null;
-
     // dùng Replica Set
     await session.withTransaction(async () => {
       
@@ -233,6 +248,17 @@ const holdBooking = async (body, user) => {
 
       createdBooking = createdDocs[0];
     });
+    const draftOrder = {
+          booking_id: createdBooking._id,
+          user_id: user.userId,
+          branch_id: branch_id,
+          total_court_fee: total_court_price,
+          total_pos_fee: 0, 
+          deposit_paid: initialDepositPaid,
+          final_amount_due: total_court_price - initialDepositPaid,
+          payment_status: initialPaymentStatus,
+          is_temporary: true
+    };
 
     return {
       booking_id: createdBooking._id,
@@ -241,6 +267,7 @@ const holdBooking = async (body, user) => {
       deposit_amount: createdBooking.deposit_amount,
       hold_token: createdBooking.hold_token,
       expires_at: createdBooking.status === "holding" ? expires_at : null, 
+      draft_order: draftOrder
     };
   } catch (error) {
     throw error;
