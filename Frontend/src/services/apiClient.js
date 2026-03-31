@@ -23,6 +23,7 @@ apiClient.interceptors.request.use(
     const { access_token } = useAuthStore.getState();
 
     if (access_token) {
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${access_token}`;
     }
 
