@@ -20,7 +20,7 @@ const bookingSchema = new mongoose.Schema(
     start_time: {
       type: Date,
       required: true,
-    },
+    },  
     end_time: {
       type: Date,
       required: true,
@@ -94,13 +94,7 @@ bookingSchema.index({ branch_id: 1, start_time: 1 });
 bookingSchema.index({ user_id: 1, createdAt: -1 });
 
 // Hỗ trợ Worker/TTL quét booking hết hạn giữ chỗ
-bookingSchema.index(
-  { createdAt: 1 },
-  {
-    expireAfterSeconds: 600,
-    partialFilterExpression: { status: "holding" },
-  }
-);
+bookingSchema.index({ status: 1, start_time: 1 });
 
 const Booking = mongoose.model("Bookings", bookingSchema);
 
