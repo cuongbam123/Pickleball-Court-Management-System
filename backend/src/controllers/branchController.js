@@ -45,8 +45,41 @@ const getBranchById = async (req, res, next) => {
   }
 };
 
+//update
+const updateBranch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const branch = await branchService.updateBranch(id, req.body);
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật chi nhánh thành công",
+      data: branch,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+//delete
+const deleteBranch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await branchService.deleteBranch(id);
+    res.status(200).json({
+      success: true,
+      message: "Xóa chi nhánh thành công",
+      data: null,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getBranches,
   createBranch,
   getBranchById,
+  updateBranch,
+  deleteBranch,
 };
