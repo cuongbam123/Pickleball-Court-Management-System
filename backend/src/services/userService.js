@@ -226,7 +226,7 @@ if (payload.old_password && payload.new_password) {
     isPasswordChanged = true;
   }
   // update Profile (thiếu phone)
-  const allowedFields = ["full_name"];
+  const allowedFields = ["full_name", "phone"];
 
   allowedFields.forEach((field) => {
     if (payload[field] !== undefined) {

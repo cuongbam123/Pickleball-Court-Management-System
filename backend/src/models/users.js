@@ -10,6 +10,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    phone: {
+      type: String,
+      trim: true,
+    },
     password: {
       type: String,
       // Việc kiểm tra bắt buộc nhập password cho tài khoản 'local' sẽ nằm ở AuthService
@@ -28,6 +32,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
+    },
+    credit: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     branch_id: {
       type: mongoose.Schema.Types.ObjectId,

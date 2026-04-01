@@ -23,6 +23,11 @@ const courtSchema = new mongoose.Schema(
       enum: ["active", "maintenance"],
       default: "active",
     },
+    tagStatus: {
+      type: String,
+      enum: ["available", "booked", "playing"],
+      default: "available",
+    },
     is_deleted: {
       type: Boolean,
       default: false,

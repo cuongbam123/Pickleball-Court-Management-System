@@ -133,6 +133,22 @@ const updateCourtStatus = async (id, status) => {
   return court;
 };
 
+const updateCourtTagStatus = async (id, tagStatus) => {
+  const court = await Court.findOneAndUpdate(
+    { _id: id, is_deleted: false },
+    { $set: { tagStatus } },
+    { new: true },
+  ).lean();
+  
+  if (!court) {
+    const error = new Error("Không tìm thấy sân này.");
+    error.statusCode = 404;
+    error.error_code = "ERR_COURT_NOT_FOUND";
+    throw error;
+  }
+  return court;
+};
+
 const deleteCourt = async (id) => {
   const court = await Court.findOne({ _id: id, is_deleted: false });
   if (!court) {
@@ -169,5 +185,6 @@ module.exports = {
   getCourtById,
   updateCourt,
   updateCourtStatus,
+  updateCourtTagStatus,
   deleteCourt,
 };
