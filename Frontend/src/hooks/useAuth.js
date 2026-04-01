@@ -2,7 +2,7 @@ import { useAuthStore } from "../store/authStore";
 
 export const useAuth = () => {
   const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const accessToken = useAuthStore((s) => s.access_token);
 
   const isAuthenticated = !!accessToken;
 

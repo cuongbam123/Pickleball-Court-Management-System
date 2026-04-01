@@ -147,7 +147,7 @@ const refreshToken = async (oldRefreshToken) => {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    return { access_token: newAccessToken, refresh_token: newRefreshToken };
   } catch (err) {
     throw { status: 403, message: "Phiên đăng nhập hết hạn" };
   }

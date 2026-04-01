@@ -5,31 +5,31 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       user: null,
-      accessToken: null,
-      refreshToken: null,
+      access_token: null,
+      refresh_token: null,
 
       isRefreshing: false,
 
-      setAuth: ({ user, accessToken, refreshToken }) => {
-        if (!user || !accessToken) return;
+      setAuth: ({ user, access_token, refresh_token }) => {
+        if (!user || !access_token) return;
 
         set({
           user,
-          accessToken,
-          refreshToken,
+          access_token,
+          refresh_token,
         });
       },
 
       clearAuth: () =>
         set({
           user: null,
-          accessToken: null,
-          refreshToken: null,
+          access_token: null,
+          refresh_token: null,
         }),
 
       setAccessToken: (token) =>
         set({
-          accessToken: token,
+          access_token: token,
         }),
 
       setRefreshing: (value) =>
