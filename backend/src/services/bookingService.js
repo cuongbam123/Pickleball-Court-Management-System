@@ -2,10 +2,12 @@ const mongoose = require("mongoose");
 const crypto = require("crypto");
 const { parseISO, isValid, isBefore } = require("date-fns");
 const { format, toZonedTime } = require("date-fns-tz");
+const { differenceInHours } = require("date-fns");
 const Booking = require("../models/bookings");
 const Court = require("../models/court");
 const PricingRule = require("../models/pricing_rules");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
+const AuditLog = require("../models/audit_logs");
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
@@ -29,10 +31,10 @@ const getBookings = async (query, user) => {
     ],
   };
 
+
   if (court_id) {
     filter.court_id = court_id;
   }
-
   const skip = (page - 1) * limit;
 
   const [bookings, total_records] = await Promise.all([
@@ -97,12 +99,23 @@ const holdBooking = async (body, user) => {
     error.statusCode = 400;
     throw error;
   }
-
   // Tính giá động
   const court = await Court.findById(court_id);
   if (!court) {
     const error = new Error("Sân không tồn tại");
     error.statusCode = 404;
+    throw error;
+  }
+  if(court.status !== "active") {
+    const error = new Error("Sân đang bảo trì, vui lòng chọn sân khác hoặc liên hệ quản lý.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const isBookingForNow = isBefore(start, new Date(Date.now() + 5 * 60 * 1000));
+  if (isBookingForNow && user.role !== "admin" && court.tagStatus !== "available") {
+    const error = new Error("Để đặt sân cho thời gian sắp tới, sân phải đang ở trạng thái 'available'. Vui lòng chọn sân khác hoặc liên hệ quản lý.");
+    error.statusCode = 400;
     throw error;
   }
 
@@ -276,4 +289,144 @@ const holdBooking = async (body, user) => {
   }
 };
 
-module.exports = { getBookings, holdBooking };
+const updateBookingStatus = async (bookingId, newStatus, user) => {
+  const booking = await Booking.findOne({ _id: bookingId, is_deleted: false });
+
+  if (!booking) {
+    const error = new Error("Không tìm thấy thông tin đặt sân");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const currentStatus = booking.status;
+  let isValidTransition = false;
+  let errorMessage = "";
+  let actionName = ""; 
+
+  // 1. Kiểm tra logic chuyển trạng thái và gán tên Action cho Log
+  if (newStatus === "playing") {
+    if (currentStatus === "deposited") {
+      isValidTransition = true;
+      actionName = "check_in_booking"; // Lễ tân nhận khách
+    } else {
+      errorMessage = `Không thể check-in. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'deposited'.`;
+    }
+  } else if (newStatus === "completed") {
+    if (currentStatus === "playing") {
+      isValidTransition = true;
+      actionName = "complete_booking"; // Khách trả sân
+    } else {
+      errorMessage = `Không thể hoàn thành. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'playing'.`;
+    }
+  }
+
+  if (!isValidTransition) {
+    const error = new Error(errorMessage);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  booking.status = newStatus;
+  await booking.save();
+
+  // lưu log
+  await AuditLog.create({
+    action: actionName,
+    user_id: user.userId,
+    target_collection: "bookings",
+    target_id: booking._id,
+    old_value: { status: currentStatus },
+    new_value: { status: newStatus }
+  });
+
+  return booking;
+};
+
+const cancelBooking = async (bookingId, reason, user) => {
+  const session = await mongoose.startSession();
+
+  try {
+     const cancelledBooking = await session.withTransaction(async () => {
+      const booking = await Booking.findOne({ _id: bookingId, is_deleted: false }).session(session);
+
+      if (!booking) {
+        const error = new Error("Không tìm thấy thông tin đặt sân");
+        error.statusCode = 404;
+        throw error;
+      }
+
+      //customer chỉ đc hủy hóa đơn của mình
+      if (user.role === "customer" && booking.user_id.toString() !== user.userId) {
+        const error = new Error("Bạn không có quyền hủy lịch đặt sân này");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      //ktr status cho phép hủy
+      const allowedStatuses = ["holding", "deposited"];
+      if (!allowedStatuses.includes(booking.status)) {
+        const error = new Error(`Không thể hủy lịch khi đang ở trạng thái '${booking.status}'`);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const currentStatus = booking.status;
+      const now = new Date();
+
+      //logic hoàn cọc
+      if (currentStatus === "deposited") {
+        const hoursUntilStart = differenceInHours(booking.start_time, now);
+        if (hoursUntilStart >= 12) {
+          booking.refund_status = "pending";
+        } else {
+          booking.refund_status = "none";
+        }
+      } else {
+        // "holding"
+        booking.refund_status = "none";
+      }
+
+      // cập nhật thông tin
+      booking.status = "cancelled";
+      booking.cancelled_by = user.userId;
+      booking.cancel_at = now;
+      
+      await booking.save({ session });
+
+      // lưu log
+      await AuditLog.create(
+        [{
+          action: "cancel_booking",
+          user_id: user.userId,
+          target_collection: "bookings",
+          target_id: booking._id,
+          old_value: { 
+            status: currentStatus, 
+            refund_status: "none" 
+          },
+          new_value: { 
+            status: "cancelled", 
+            refund_status: booking.refund_status,
+            reason: reason
+          },
+          is_deleted: false,
+        }],
+        { session: session }
+      );
+      // xử lí hoàn tiền( chưa có payment)
+      return booking;
+    });
+     return cancelledBooking;
+  } catch (error) {
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+module.exports = {
+   getBookings,
+   holdBooking,
+   updateBookingStatus,
+   cancelBooking,
+  };

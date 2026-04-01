@@ -63,7 +63,40 @@ const holdBookingValidation = {
   }),
 };
 
+const updateBookingStatusValidation = {
+  body: Joi.object({
+    status: Joi.string()
+      .valid("playing", "completed")
+      .required()
+      .messages({
+        "any.required": "Trạng thái (status) là bắt buộc",
+        "any.only": "Trạng thái chỉ chấp nhận giá trị 'playing' hoặc 'completed'",
+      }),
+  }),
+  params: Joi.object({
+    id: Joi.string().pattern(objectIdRegex).required().messages({
+      "string.pattern.base": "booking_id không hợp lệ",
+    }),
+  }),
+};
+
+const cancelBookingValidation = {
+  body: Joi.object({
+    reason: Joi.string().trim().required().messages({
+      "any.required": "Lý do hủy là bắt buộc",
+      "string.empty": "Lý do hủy không được để trống",
+    }),
+  }),
+  params: Joi.object({
+    id: Joi.string().pattern(objectIdRegex).required().messages({
+      "string.pattern.base": "booking_id không hợp lệ",
+    }),
+  }),
+};
+
 module.exports = {
   getBookingsValidation,
   holdBookingValidation,
+  updateBookingStatusValidation,
+  cancelBookingValidation,
 };

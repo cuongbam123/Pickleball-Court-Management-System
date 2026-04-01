@@ -1,13 +1,14 @@
 const express = require("express");
 const router = express.Router();
 
-const orderController = require ("../controllers/orderController")
 const bookingController = require("../controllers/bookingController");
 const { validate, authenticate, optionalAuth } = require("../middlewares");
 
 const {
   getBookingsValidation,
   holdBookingValidation,
+  updateBookingStatusValidation,
+  cancelBookingValidation,
 } = require("../validations/bookingValidation");
 
 // public
@@ -25,4 +26,16 @@ router.post(
   bookingController.holdBooking
 );
 
+router.patch(
+  "/:id/status",
+  authenticate,
+  validate(updateBookingStatusValidation),
+  bookingController.updateBookingStatus
+);
+router.patch(
+  "/:id/cancel",
+  authenticate,
+  validate(cancelBookingValidation),
+  bookingController.cancelBooking
+);
 module.exports = router;
