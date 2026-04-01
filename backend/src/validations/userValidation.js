@@ -35,6 +35,7 @@ const updateUser = {
     full_name: Joi.string().min(2).max(255),
     email: Joi.string().email(),
     role: Joi.string().valid("admin", "staff", "customer"),
+    phone: Joi.string().pattern(/^[0-9]{9,11}$/),
     branch_id: Joi.when("role", {
       is: "staff",
       then: Joi.string().custom(objectId).required(),

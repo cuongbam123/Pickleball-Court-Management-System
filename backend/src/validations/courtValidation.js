@@ -10,6 +10,7 @@ const getCourtsByBranch = {
     limit: Joi.number().min(1).max(100).default(50), // Theo contract của bạn limit mặc định là 50
     type: Joi.string().valid("2-player", "4-player").allow("", null),
     status: Joi.string().valid("active", "maintenance").allow("", null),
+    tagStatus: Joi.string().valid("available", "booked", "playing").allow("", null),
   }),
 };
 
@@ -22,6 +23,7 @@ const createCourt = {
     name: Joi.string().trim().min(2).required(),
     type: Joi.string().valid("2-player", "4-player").required(),
     status: Joi.string().valid("active", "maintenance").default("active"),
+    tagStatus: Joi.string().valid("available", "booked", "playing").default("available"),
   }),
 };
 
@@ -51,6 +53,15 @@ const updateCourtStatus = {
   }),
 };
 
+const updateCourtTagStatus = {
+  params: Joi.object({
+    id: Joi.string().hex().length(24).required(),
+  }),
+  body: Joi.object({
+    tagStatus: Joi.string().valid("available", "booked", "playing").required(),
+  }),
+};
+
 const deleteCourt = {
   params: Joi.object({
     id: Joi.string().hex().length(24).required(),
@@ -62,5 +73,6 @@ module.exports = {
   getCourtById,
   updateCourt,
   updateCourtStatus,
+  updateCourtTagStatus,
   deleteCourt,
 };

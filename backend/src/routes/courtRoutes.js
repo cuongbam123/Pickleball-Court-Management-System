@@ -8,6 +8,7 @@ const {
   updateCourtStatus,
   deleteCourt,
   getCourtById,
+  updateCourtTagStatus,
 } = require("../validations/courtValidation");
 
 //public
@@ -29,6 +30,14 @@ router.patch(
   authorizeRoles("admin", "staff"),
   validate(updateCourtStatus),
   courtController.updateCourtStatus,
+);
+
+router.patch(
+  "/:id/tag-status",
+  authenticate,
+  authorizeRoles("admin", "staff"),
+  validate(updateCourtTagStatus),
+  courtController.updateCourtTagStatus,
 );
 
 router.delete(

@@ -70,13 +70,26 @@ const updateCourtStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
     const court = await courtService.updateCourtStatus(id, status);
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Cập nhật trạng thái sân thành công",
-        data: court,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật trạng thái sân thành công",
+      data: court,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+const updateCourtTagStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { tagStatus } = req.body;
+    const court = await courtService.updateCourtTagStatus(id, tagStatus);
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật trạng thái tag sân thành công",
+      data: court,
+    });
   } catch (err) {
     next(err);
   }
@@ -100,5 +113,6 @@ module.exports = {
   getCourtById,
   updateCourt,
   updateCourtStatus,
+  updateCourtTagStatus,
   deleteCourt,
 };
