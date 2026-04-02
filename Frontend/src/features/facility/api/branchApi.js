@@ -13,7 +13,7 @@ export const createBranch = (data) => {
 }
 
 export const updateBranch = (id, data) => { 
-    return apiClient.put(`/api/v1/branches${id}`, data); 
+    return apiClient.put(`/api/v1/branches/${id}`, data); 
 }
 
 export const deleteBranch = (id) => { 
