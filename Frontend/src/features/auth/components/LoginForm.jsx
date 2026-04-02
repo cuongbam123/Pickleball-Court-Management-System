@@ -24,7 +24,7 @@ const LoginForm = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (loading) return;
+    // if (loading) return;
 
     try {
       setLoading(true);
