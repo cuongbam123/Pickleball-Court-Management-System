@@ -37,3 +37,8 @@ export const updateMe = (data) => {
 };
 
 //ADMIN
+
+// GET /users/dashboard/stats
+export const getDashboardStats = () => {
+  return apiClient.get("/api/v1/users/dashboard/stats");
+};

@@ -69,4 +69,11 @@ router.delete(
   validate(deleteUser),
   userController.deleteUser,
 );
+
+router.get(
+  "/dashboard/stats",
+  authenticate,
+  authorizeRoles("admin"),
+  userController.getDashboardStats,
+);
 module.exports = router;
