@@ -27,7 +27,7 @@ const AdminBranchPage = () => {
       header: "Thao tác",
       render: (item) => (
         <div className="flex gap-2">
-          <button onClick={() => handleOpenEdit(item)} className="...">
+          <button onClick={() => handleOpenEdit(item)} className="hover:bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-medium">
             Sửa
           </button>
           <Button
@@ -67,7 +67,7 @@ const AdminBranchPage = () => {
       </div>
 
       <div className="pt-4 border-t border-gray-100 flex justify-end gap-3 mt-auto">
-        <button onClick={() => handleOpenEdit(branch)} className="...">
+        <button onClick={() => handleOpenEdit(branch)} className="hover:bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-medium">
           Chỉnh sửa
         </button>
         <button
