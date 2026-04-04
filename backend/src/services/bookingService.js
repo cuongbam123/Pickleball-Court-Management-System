@@ -12,7 +12,7 @@ const AuditLog = require("../models/audit_logs");
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
 
-  const startOfDay = fromZonedTime(`${date}T00:00:00`, TIMEZONE); 
+  const startOfDay = fromZonedTime(`${date}T00:00:00`, TIMEZONE);
   const endOfDay = fromZonedTime(`${date}T23:59:59.999`, TIMEZONE);
 
   if (isNaN(startOfDay.getTime()) || isNaN(endOfDay.getTime())) {
@@ -30,7 +30,6 @@ const getBookings = async (query, user) => {
       { end_time: { $gt: startOfDay } },
     ],
   };
-
 
   if (court_id) {
     filter.court_id = court_id;
@@ -76,7 +75,14 @@ const getBookings = async (query, user) => {
 };
 
 const holdBooking = async (body, user) => {
-  const { court_id, branch_id, start_time, end_time, booking_type, buffer_time = 10 } = body;
+  const {
+    court_id,
+    branch_id,
+    start_time,
+    end_time,
+    booking_type,
+    buffer_time = 10,
+  } = body;
 
   const start = parseISO(start_time);
   const end = parseISO(end_time);
@@ -99,22 +105,46 @@ const holdBooking = async (body, user) => {
     error.statusCode = 400;
     throw error;
   }
-  // Tính giá động
+  // giới hạn tgian đặt sân
+  const durationMins = (end.getTime() - start.getTime()) / 60000;
+  if (durationMins < 60 || durationMins > 240) {
+    throw new Error("Thời gian đặt sân phải từ 1 đến 4 tiếng.");
+  }
+  // chống spam
+  const holdingCount = await Booking.countDocuments({
+    user_id: user.userId,
+    status: "holding",
+  });
+
+  if (holdingCount >= 3 && user.role === "customer") {
+    throw new Error(
+      "Bạn đã có 3 lịch giữ sân đang chờ thanh toán. Vui lòng thanh toán hoặc hủy bớt các lịch đó trước khi đặt thêm.",
+    );
+  }
+
   const court = await Court.findById(court_id);
   if (!court) {
     const error = new Error("Sân không tồn tại");
     error.statusCode = 404;
     throw error;
   }
-  if(court.status !== "active") {
-    const error = new Error("Sân đang bảo trì, vui lòng chọn sân khác hoặc liên hệ quản lý.");
+  if (court.status !== "active") {
+    const error = new Error(
+      "Sân đang bảo trì, vui lòng chọn sân khác hoặc liên hệ quản lý.",
+    );
     error.statusCode = 400;
     throw error;
   }
 
   const isBookingForNow = isBefore(start, new Date(Date.now() + 5 * 60 * 1000));
-  if (isBookingForNow && user.role !== "admin" && court.tagStatus !== "available") {
-    const error = new Error("Để đặt sân cho thời gian sắp tới, sân phải đang ở trạng thái 'available'. Vui lòng chọn sân khác hoặc liên hệ quản lý.");
+  if (
+    isBookingForNow &&
+    user.role !== "admin" &&
+    court.tagStatus !== "available"
+  ) {
+    const error = new Error(
+      "Để đặt sân cho thời gian sắp tới, sân phải đang ở trạng thái 'available'. Vui lòng chọn sân khác hoặc liên hệ quản lý.",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -126,14 +156,16 @@ const holdBooking = async (body, user) => {
   });
 
   if (rules.length === 0) {
-    const error = new Error("Chưa có cấu hình bảng giá cho chi nhánh và loại sân này.");
+    const error = new Error(
+      "Chưa có cấu hình bảng giá cho chi nhánh và loại sân này.",
+    );
     error.statusCode = 400;
     throw error;
   }
 
   let totalPrice = 0;
   let currentStart = new Date(start);
-// loop tính theo ngày
+  // loop tính theo ngày
   while (currentStart < end) {
     const currentEnd = new Date(currentStart);
     currentEnd.setHours(23, 59, 59, 999);
@@ -142,17 +174,32 @@ const holdBooking = async (body, user) => {
     // ktr type
     const dayOfWeekStr = format(currentStart, "i", { timeZone: TIMEZONE });
     const dayOfWeek = parseInt(dayOfWeekStr, 10);
-    const dayType = (dayOfWeek === 6 || dayOfWeek === 7) ? "weekend" : "weekday";
+    const dayType = dayOfWeek === 6 || dayOfWeek === 7 ? "weekend" : "weekday";
 
     const dailyRules = rules.filter((r) => r.day_type === dayType);
 
-    const startH = parseInt(format(currentStart, "HH", { timeZone: TIMEZONE }), 10);
-    const startM = parseInt(format(currentStart, "mm", { timeZone: TIMEZONE }), 10);
+    const startH = parseInt(
+      format(currentStart, "HH", { timeZone: TIMEZONE }),
+      10,
+    );
+    const startM = parseInt(
+      format(currentStart, "mm", { timeZone: TIMEZONE }),
+      10,
+    );
     const startMins = startH * 60 + startM;
 
-    const endH = parseInt(format(endOfSegment, "HH", { timeZone: TIMEZONE }), 10);
-    const endM = parseInt(format(endOfSegment, "mm", { timeZone: TIMEZONE }), 10);
-    const endSeconds = parseInt(format(endOfSegment, "ss", { timeZone: TIMEZONE }), 10);
+    const endH = parseInt(
+      format(endOfSegment, "HH", { timeZone: TIMEZONE }),
+      10,
+    );
+    const endM = parseInt(
+      format(endOfSegment, "mm", { timeZone: TIMEZONE }),
+      10,
+    );
+    const endSeconds = parseInt(
+      format(endOfSegment, "ss", { timeZone: TIMEZONE }),
+      10,
+    );
     const endMins = endH * 60 + endM + (endSeconds > 0 ? 1 : 0);
 
     let dayCalculatedMins = 0;
@@ -164,12 +211,12 @@ const holdBooking = async (body, user) => {
       const ruleStartMins = rStartH * 60 + rStartM;
       let ruleEndMins = rEndH * 60 + rEndM;
       if (rule.end_time === "23:59" || rule.end_time === "24:00") {
-        ruleEndMins = 24 * 60; 
+        ruleEndMins = 24 * 60;
       }
 
       const overlapStart = Math.max(startMins, ruleStartMins);
       const overlapEnd = Math.min(endMins, ruleEndMins);
-      // tổng giá
+      // Tính giá động
       if (overlapStart < overlapEnd) {
         const overlapDurationMins = overlapEnd - overlapStart;
         totalPrice += (overlapDurationMins / 60) * rule.price_per_hour;
@@ -179,7 +226,9 @@ const holdBooking = async (body, user) => {
     // ss tgian
     const segmentDuration = endMins - startMins;
     if (dayCalculatedMins < segmentDuration) {
-      const error = new Error(`Có khung giờ chưa được thiết lập giá vào ngày ${currentStart.toLocaleDateString()}. Vui lòng liên hệ quản lý.`);
+      const error = new Error(
+        `Có khung giờ chưa được thiết lập giá vào ngày ${currentStart.toLocaleDateString()}. Vui lòng liên hệ quản lý.`,
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -188,7 +237,7 @@ const holdBooking = async (body, user) => {
   }
 
   const total_court_price = Math.round(totalPrice);
-  const deposit_amount = Math.round(total_court_price * 0.5); 
+  const deposit_amount = Math.round(total_court_price * 0.5);
   const hold_token = crypto.randomUUID();
   const expires_at = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -201,7 +250,7 @@ const holdBooking = async (body, user) => {
   if (user.role === "admin" || user.role === "staff") {
     initialPaymentStatus = "deposit_paid";
     initialDepositPaid = deposit_amount;
-    initialStatus = "deposited"; 
+    initialStatus = "deposited";
     finalHoldToken = null;
   }
 
@@ -214,8 +263,9 @@ const holdBooking = async (body, user) => {
     let createdBooking = null;
     // dùng Replica Set
     await session.withTransaction(async () => {
-      
-      // xây dựng overlap   
+      const bufferMs = buffer_time * 60 * 1000;
+      const endWithNewBuffer = new Date(end.getTime() + bufferMs);
+      // xây dựng overlap
       const conflictBooking = await Booking.findOne({
         court_id,
         is_deleted: false,
@@ -223,16 +273,21 @@ const holdBooking = async (body, user) => {
         $expr: {
           $and: [
             // start < end_time + buffer_time
-            { $lt: [ start, { $add: ["$end_time", { $multiply: ["$buffer_time", 60000] }] } ] },
+            {
+              $lt: [
+                start,
+                { $add: ["$end_time", { $multiply: ["$buffer_time", 60000] }] },
+              ],
+            },
             // end > start_time
-            { $gt: [ end, "$start_time" ] }
-          ]
-        }
+            { $gt: [endWithNewBuffer, "$start_time"] },
+          ],
+        },
       }).session(session);
 
       if (conflictBooking) {
         const error = new Error(
-          "Sân đã có người đặt (hoặc đang trong thời gian dọn sân) trong khoảng thời gian này."
+          "Sân đã có người đặt (hoặc đang trong thời gian dọn sân) trong khoảng thời gian này.",
         );
         error.statusCode = 409;
         error.errorCode = "ERR_COURT_CONFLICT";
@@ -249,28 +304,28 @@ const holdBooking = async (body, user) => {
             end_time: end,
             buffer_time: buffer_time,
             booking_type,
-            status: initialStatus,  
+            status: initialStatus,
             deposit_amount,
             total_court_price,
-            hold_token: finalHoldToken,  
+            hold_token: finalHoldToken,
             hold_owner: user.userId,
           },
         ],
-        { session }
+        { session },
       );
 
       createdBooking = createdDocs[0];
     });
     const draftOrder = {
-          booking_id: createdBooking._id,
-          user_id: user.userId,
-          branch_id: branch_id,
-          total_court_fee: total_court_price,
-          total_pos_fee: 0, 
-          deposit_paid: initialDepositPaid,
-          final_amount_due: total_court_price - initialDepositPaid,
-          payment_status: initialPaymentStatus,
-          is_temporary: true
+      booking_id: createdBooking._id,
+      user_id: user.userId,
+      branch_id: branch_id,
+      total_court_fee: total_court_price,
+      total_pos_fee: 0,
+      deposit_paid: initialDepositPaid,
+      final_amount_due: total_court_price - initialDepositPaid,
+      payment_status: initialPaymentStatus,
+      is_temporary: true,
     };
 
     return {
@@ -279,8 +334,8 @@ const holdBooking = async (body, user) => {
       total_court_price: createdBooking.total_court_price,
       deposit_amount: createdBooking.deposit_amount,
       hold_token: createdBooking.hold_token,
-      expires_at: createdBooking.status === "holding" ? expires_at : null, 
-      draft_order: draftOrder
+      expires_at: createdBooking.status === "holding" ? expires_at : null,
+      draft_order: draftOrder,
     };
   } catch (error) {
     throw error;
@@ -290,64 +345,16 @@ const holdBooking = async (body, user) => {
 };
 
 const updateBookingStatus = async (bookingId, newStatus, user) => {
-  const booking = await Booking.findOne({ _id: bookingId, is_deleted: false });
-
-  if (!booking) {
-    const error = new Error("Không tìm thấy thông tin đặt sân");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const currentStatus = booking.status;
-  let isValidTransition = false;
-  let errorMessage = "";
-  let actionName = ""; 
-
-  // 1. Kiểm tra logic chuyển trạng thái và gán tên Action cho Log
-  if (newStatus === "playing") {
-    if (currentStatus === "deposited") {
-      isValidTransition = true;
-      actionName = "check_in_booking"; // Lễ tân nhận khách
-    } else {
-      errorMessage = `Không thể check-in. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'deposited'.`;
-    }
-  } else if (newStatus === "completed") {
-    if (currentStatus === "playing") {
-      isValidTransition = true;
-      actionName = "complete_booking"; // Khách trả sân
-    } else {
-      errorMessage = `Không thể hoàn thành. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'playing'.`;
-    }
-  }
-
-  if (!isValidTransition) {
-    const error = new Error(errorMessage);
-    error.statusCode = 400;
-    throw error;
-  }
-
-  booking.status = newStatus;
-  await booking.save();
-
-  // lưu log
-  await AuditLog.create({
-    action: actionName,
-    user_id: user.userId,
-    target_collection: "bookings",
-    target_id: booking._id,
-    old_value: { status: currentStatus },
-    new_value: { status: newStatus }
-  });
-
-  return booking;
-};
-
-const cancelBooking = async (bookingId, reason, user) => {
   const session = await mongoose.startSession();
 
   try {
-     const cancelledBooking = await session.withTransaction(async () => {
-      const booking = await Booking.findOne({ _id: bookingId, is_deleted: false }).session(session);
+    let updatedBooking = null;
+
+    await session.withTransaction(async () => {
+      const booking = await Booking.findOne({
+        _id: bookingId,
+        is_deleted: false,
+      }).session(session);
 
       if (!booking) {
         const error = new Error("Không tìm thấy thông tin đặt sân");
@@ -355,68 +362,225 @@ const cancelBooking = async (bookingId, reason, user) => {
         throw error;
       }
 
-      //customer chỉ đc hủy hóa đơn của mình
-      if (user.role === "customer" && booking.user_id.toString() !== user.userId) {
-        const error = new Error("Bạn không có quyền hủy lịch đặt sân này");
-        error.statusCode = 403;
+      const currentStatus = booking.status;
+      const now = new Date();
+      let isValidTransition = false;
+      let errorMessage = "";
+      let actionName = "";
+      // ktr trạng thái
+      if (newStatus === "playing") {
+        if (currentStatus === "deposited") {
+          isValidTransition = true;
+          actionName = "check_in_booking";
+        } else {
+          errorMessage = `Không thể check-in. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'deposited'.`;
+        }
+
+        // Kiểm tra thời gian check-in
+        const diffMins = (booking.start_time - now) / (1000 * 60);
+        if (diffMins > 30 && user.role !== "admin") {
+          const error = new Error(
+            "Còn quá sớm để check-in. Vui lòng quay lại trước giờ bắt đầu 30 phút.",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        await Court.findByIdAndUpdate(
+          booking.court_id,
+          { tagStatus: "playing" },
+          { session },
+        );
+      } else if (newStatus === "completed") {
+        if (currentStatus === "playing") {
+          isValidTransition = true;
+          actionName = "complete_booking";
+        } else {
+          errorMessage = `Không thể hoàn thành. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'playing'.`;
+        }
+        if (!["admin", "staff"].includes(user.role)) {
+          const error = new Error(
+            "Chỉ nhân viên hoặc quản lý mới được phép thao tác thanh toán và trả sân.",
+          );
+          error.statusCode = 403;
+          throw error;
+        }
+
+        // xử lí payment-status thành công(chưa xử lí)
+
+        await Court.findByIdAndUpdate(
+          booking.court_id,
+          { tagStatus: "available" },
+          { session },
+        );
+      }
+
+      // Xử lý nếu trạng thái chuyển đổi không hợp lệ
+      if (!isValidTransition) {
+        const error = new Error(errorMessage);
+        error.statusCode = 400;
         throw error;
+      }
+
+      // Lưu lại thông tin Booking
+      booking.status = newStatus;
+      await booking.save({ session });
+
+      // Lưu AuditLog
+      await AuditLog.create(
+        [
+          {
+            action: actionName,
+            user_id: user.userId,
+            target_collection: "bookings",
+            target_id: booking._id,
+            old_value: { status: currentStatus },
+            new_value: { status: newStatus },
+          },
+        ],
+        { session },
+      );
+
+      updatedBooking = booking;
+    });
+
+    return updatedBooking;
+  } catch (error) {
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+const cancelBooking = async (bookingId, reason, user) => {
+  const session = await mongoose.startSession();
+
+  try {
+    const cancelledBooking = await session.withTransaction(async () => {
+      const booking = await Booking.findOne({
+        _id: bookingId,
+        is_deleted: false,
+      }).session(session);
+
+      if (!booking) {
+        const error = new Error("Không tìm thấy thông tin đặt sân");
+        error.statusCode = 404;
+        throw error;
+      }
+      const now = new Date();
+      //customer chỉ đc hủy hóa đơn của mình
+      if (user.role === "customer") {
+        if (booking.user_id.toString() !== user.userId) {
+          const error = new Error("Bạn không có quyền hủy lịch đặt sân này");
+          error.statusCode = 403;
+          throw error;
+        }
+
+
+        if (now >= booking.start_time) {
+          const error = new Error(
+            "Đã qua giờ bắt đầu, bạn không thể tự hủy lịch. Vui lòng liên hệ quản lý.",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
       }
 
       //ktr status cho phép hủy
       const allowedStatuses = ["holding", "deposited"];
       if (!allowedStatuses.includes(booking.status)) {
-        const error = new Error(`Không thể hủy lịch khi đang ở trạng thái '${booking.status}'`);
+        const error = new Error(
+          `Không thể hủy lịch khi đang ở trạng thái '${booking.status}'`,
+        );
         error.statusCode = 400;
         throw error;
       }
 
       const currentStatus = booking.status;
-      const now = new Date();
 
-      //logic hoàn cọc
+      let refundPercentage = 0;
+      let isRefundable = false;
+      let refundAmount = 0;
+      //logic hoàn cọc (chỉ hoàn cọc khi đã thanh toán cọc)
       if (currentStatus === "deposited") {
-        const hoursUntilStart = differenceInHours(booking.start_time, now);
-        if (hoursUntilStart >= 12) {
+        const hoursUntilStart =
+          (booking.start_time.getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursUntilStart >= 6) {
           booking.refund_status = "pending";
+          refundPercentage = 100;
+          isRefundable = true;
+        } else if (hoursUntilStart >= 3 && hoursUntilStart < 6) {
+          booking.refund_status = "pending";
+          refundPercentage = 70;
+          isRefundable = true;
         } else {
           booking.refund_status = "none";
+          refundPercentage = 0;
+          isRefundable = false;
+        }
+        if (isRefundable) {
+          refundAmount = Math.round(
+            (booking.deposit_amount * refundPercentage) / 100,
+          );
         }
       } else {
-        // "holding"
         booking.refund_status = "none";
+        refundPercentage = 0;
+        isRefundable = false;
       }
 
       // cập nhật thông tin
       booking.status = "cancelled";
       booking.cancelled_by = user.userId;
       booking.cancel_at = now;
+      // trả sân
+      if (
+        now >= new Date(booking.start_time.getTime() - 30 * 60000) &&
+        now <= booking.end_time
+      ) {
+        await Court.findByIdAndUpdate(
+          booking.court_id,
+          { tagStatus: "available" },
+          { session },
+        );
+      }
       
       await booking.save({ session });
 
       // lưu log
       await AuditLog.create(
-        [{
-          action: "cancel_booking",
-          user_id: user.userId,
-          target_collection: "bookings",
-          target_id: booking._id,
-          old_value: { 
-            status: currentStatus, 
-            refund_status: "none" 
+        [
+          {
+            action: "cancel_booking",
+            user_id: user.userId,
+            target_collection: "bookings",
+            target_id: booking._id,
+            old_value: {
+              status: currentStatus,
+              refund_status: "none",
+            },
+            new_value: {
+              status: "cancelled",
+              refund_status: booking.refund_status,
+              reason: reason,
+              refund_percentage: refundPercentage,
+              refund_amount: refundAmount,
+            },
+            is_deleted: false,
           },
-          new_value: { 
-            status: "cancelled", 
-            refund_status: booking.refund_status,
-            reason: reason
-          },
-          is_deleted: false,
-        }],
-        { session: session }
+        ],
+        { session: session },
       );
-      // xử lí hoàn tiền( chưa có payment)
-      return booking;
+      return {
+        booking,
+        refund_action: {
+          is_refundable: isRefundable,
+          amount: refundAmount,
+          percentage: refundPercentage,
+        },
+      };
     });
-     return cancelledBooking;
+    return cancelledBooking;
   } catch (error) {
     throw error;
   } finally {
@@ -425,8 +589,8 @@ const cancelBooking = async (bookingId, reason, user) => {
 };
 
 module.exports = {
-   getBookings,
-   holdBooking,
-   updateBookingStatus,
-   cancelBooking,
-  };
+  getBookings,
+  holdBooking,
+  updateBookingStatus,
+  cancelBooking,
+};

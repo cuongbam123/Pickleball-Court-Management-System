@@ -58,17 +58,18 @@ const cancelBooking = async (req, res, next) => {
     const { reason } = req.body; 
     const user = req.user;
 
-    const cancelledBooking = await bookingService.cancelBooking(id, reason, user);
+    const result = await bookingService.cancelBooking(id, reason, user);
 
     return res.status(200).json({
       success: true,
       message: "Hủy đặt sân thành công",
       data: {
-        _id: cancelledBooking._id,
-        status: cancelledBooking.status,
-        cancel_at: cancelledBooking.cancel_at,
-        refund_status: cancelledBooking.refund_status,
-        deposit_amount: cancelledBooking.deposit_amount
+        _id: result._id,
+        status: result.status,
+        cancel_at: result.cancel_at,
+        refund_status: result.refund_status,
+        deposit_amount: result.deposit_amount,
+        refund_action: result.refund_action,
       },
     });
   } catch (error) {
