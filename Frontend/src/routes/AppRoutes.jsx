@@ -11,6 +11,7 @@ import HomePage from "../pages/Home/HomePage";
 //admin
 import AdminHome from "../pages/admin/AdminHome";
 import AdminBranchPage from "../pages/admin/AdminBranchPage";
+import AdminCourtPage from "../pages/admin/AdminCourtPage";
 
 const AppRoutes = () => {
   return (
@@ -51,6 +52,14 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute roles={["admin"]}>
               <AdminBranchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/courts"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminCourtPage />
             </ProtectedRoute>
           }
         />

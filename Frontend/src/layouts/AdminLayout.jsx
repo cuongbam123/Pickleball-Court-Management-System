@@ -4,7 +4,7 @@ import Sidebar from "../../src/components/layout/Sidebar";
 
 const adminItems = [
   { label: "Tổng quan", to: "/home" },
-  { label: "Quản lý sân", to: "/courts" },
+  { label: "Quản lý sân", to: "/admin/courts" },
   { label: "Chi nhánh", to: "/admin/branches" },
   { label: "Nhân viên", to: "/staff-management" },
   { label: "Giá", to: "/pricing" },

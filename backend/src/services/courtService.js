@@ -2,10 +2,56 @@ const Court = require("../models/court");
 const Branch = require("../models/branches");
 const Booking = require("../models/bookings");
 
+//Get all
+// court.service.js (hoặc file chứa hàm getCourtsByBranch hiện tại của bạn)
+
+// GET ALL COURTS (Có hỗ trợ lọc tùy chọn)
+const getAllCourts = async (
+  { page = 1, limit = 10, type, status, tagStatus, branch_id },
+  userRole
+) => {
+  const isAdmin = userRole === "admin";
+
+  // Build query linh hoạt
+  const query = {
+    ...(branch_id && { branch_id }), // Nếu có truyền branch_id lên thì lọc, không thì lấy hết
+    ...(type && { type }),
+    ...(status && { status }),
+    ...(tagStatus && { tagStatus }),
+  };
+
+  // Check quyền: Admin thấy cả sân đã xóa (soft delete), role khác thì không
+  if (!isAdmin) {
+    query.is_deleted = false;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [data, total] = await Promise.all([
+    Court.find(query)
+      .populate("branch_id", "name address") // 👉 Lấy luôn tên và địa chỉ chi nhánh
+      .sort({ is_deleted: 1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select("-createdAt -updatedAt")
+      .lean(),
+    Court.countDocuments(query),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total_records: total,
+      total_pages: Math.ceil(total / limit) || 1,
+    },
+  };
+};
 // GET COURTS BY BRANCH
 const getCourtsByBranch = async (
   branchId,
-  { page, limit, type, status },
+  { page, limit, type, status, tagStatus },
   userRole,
 ) => {
   const isAdmin = userRole === "admin";
@@ -14,6 +60,7 @@ const getCourtsByBranch = async (
     branch_id: branchId,
     ...(type && { type }),
     ...(status && { status }),
+    ...(tagStatus && { tagStatus }),
   };
   //check phai admin k
   if (!isAdmin) {
@@ -180,6 +227,7 @@ const deleteCourt = async (id) => {
 };
 
 module.exports = {
+  getAllCourts,
   getCourtsByBranch,
   createCourt,
   getCourtById,
