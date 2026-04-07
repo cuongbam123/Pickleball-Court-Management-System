@@ -11,8 +11,6 @@ import HomePage from "../pages/Home/HomePage";
 //admin
 import AdminHome from "../pages/admin/AdminHome";
 import AdminBranchPage from "../pages/admin/AdminBranchPage";
-import AdminStaffPage from "../pages/admin/AdminStaffPage";
-import AdminUsersPage from "../pages/admin/AdminUsersPage";
 
 const AppRoutes = () => {
   return (
@@ -53,22 +51,6 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute roles={["admin"]}>
               <AdminBranchPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/staff"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminStaffPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminUsersPage />
             </ProtectedRoute>
           }
         />

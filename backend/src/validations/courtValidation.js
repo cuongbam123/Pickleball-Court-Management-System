@@ -1,5 +1,16 @@
 const Joi = require("joi");
 
+const getAllCourts = {
+  query: Joi.object({
+    page: Joi.number().min(1).default(1),
+    limit: Joi.number().min(1).max(100).default(50), // Vẫn giữ limit mặc định là 50
+    branch_id: Joi.string().hex().length(24).allow("", null), // Cho phép lọc thêm theo chi nhánh
+    type: Joi.string().valid("2-player", "4-player").allow("", null),
+    status: Joi.string().valid("active", "maintenance").allow("", null),
+    tagStatus: Joi.string().valid("available", "booked", "playing").allow("", null),
+  }),
+};
+
 // GET COURTS BY BRANCH
 const getCourtsByBranch = {
   params: Joi.object({
@@ -68,6 +79,7 @@ const deleteCourt = {
   }),
 };
 module.exports = {
+  getAllCourts,
   getCourtsByBranch,
   createCourt,
   getCourtById,

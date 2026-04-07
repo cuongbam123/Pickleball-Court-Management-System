@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 // Import đúng tên các hàm bạn đã định nghĩa
 import { getBranches, createBranch as apiCreateBranch, updateBranch as apiUpdateBranch, deleteBranch as apiDeleteBranch } from "../api/branchApi";
-// import { toast } from "react-toastify";
+import { toast } from "react-toastify";
 
 export const useBranches = () => {
   const [branches, setBranches] = useState([]);
@@ -25,7 +25,7 @@ export const useBranches = () => {
     try {
       await apiCreateBranch(data);
       toast.success("Tạo chi nhánh thành công!");
-      fetchBranches(); 
+      await fetchBranches();
       return true;
     } catch (error) { return false; }
   };
@@ -34,7 +34,7 @@ export const useBranches = () => {
     try {
       await apiUpdateBranch(id, data);
       toast.success("Cập nhật thành công!");
-      fetchBranches();
+      await fetchBranches();
       return true;
     } catch (error) { return false; }
   };
