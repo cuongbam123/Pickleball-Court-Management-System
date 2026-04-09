@@ -6,14 +6,17 @@ import AdminStaffForm from "../../features/auth/components/UpdateForm";
 import Table from "../../components/ui/Table";
 import clsx from "clsx";
 import Modal from "../../components/ui/Modal";
+import SelectFilter from "../../components/ui/Filter";
 
 const AdminUsersPage = () => {
   const { users, isLoading } = useAdminUsers();
   const [viewMode, setViewMode] = useState("table");
-  const { branchNames, handleDeleteUser, handleUpdateUser , fetchUsers } = useAdminStaff();
+  const { branchNames, handleDeleteUser, handleUpdateUser, fetchUsers } =
+    useAdminStaff();
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [selectedRole, setSelectedRole] = useState("");
 
   const selectedUser = users.find((user) => user._id === userToUpdate) || null;
 
@@ -27,17 +30,17 @@ const AdminUsersPage = () => {
     setShowDeleteModal(false);
   };
 
-const handleSubmitUpdate = async (userId, formData) => {
+  const handleSubmitUpdate = async (userId, formData) => {
     const result = await handleUpdateUser(userId, formData);
     console.log("Update result:", result);
     if (result.success) {
       alert("Cập nhật thành công");
       setUserToUpdate(null);
-      fetchUsers(); 
+      fetchUsers();
     } else {
       alert("Cập nhật thất bại");
     }
-    };
+  };
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
 
@@ -52,6 +55,17 @@ const handleSubmitUpdate = async (userId, formData) => {
       alert("Xóa thất bại");
     }
   };
+
+  const handleRoleChange = (value) => {
+    setSelectedRole(value);
+  };
+
+  const filteredUsers = users.filter((user) => {
+    if (selectedRole && user.role !== selectedRole) {
+      return false;
+    }
+    return true;
+  });
 
   const columns = [
     { header: "Tên", accessor: "full_name" },
@@ -149,8 +163,8 @@ const handleSubmitUpdate = async (userId, formData) => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Quản lý Staff</h1>
-            <p className="text-sm text-slate-500">Danh sách các nhân viên</p>
+            <h1 className="text-2xl font-bold text-slate-900">Quản lý Người dùng</h1>
+            <p className="text-sm text-slate-500">Danh sách các người dùng</p>
           </div>
 
           <div className="flex items-center gap-4">
@@ -211,10 +225,24 @@ const handleSubmitUpdate = async (userId, formData) => {
             </div>
           </div>
         </div>
+          <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
+            <SelectFilter
+              label="Lọc theo vai trò"
+              options={[
+                { label: "Admin", value: "admin" },
+                { label: "Staff", value: "staff" },
+                { label: "Customer", value: "customer" },
+              ]}
+              value={selectedRole}
+              onChange={handleRoleChange}
+              placeholder="Tất cả vai trò"
+              className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
 
         <Table
           columns={columns}
-          data={users}
+          data={filteredUsers}
           loading={isLoading}
           rowKey="_id"
           viewMode={viewMode}
