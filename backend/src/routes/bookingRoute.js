@@ -9,6 +9,7 @@ const {
   holdBookingValidation,
   updateBookingStatusValidation,
   cancelBookingValidation,
+  payDepositValidattion,
 } = require("../validations/bookingValidation");
 
 // public
@@ -18,6 +19,12 @@ router.get(
   validate(getBookingsValidation),
   bookingController.getBookings
 );
+
+router.post(
+  '/:id/pay-deposit',
+   authenticate,
+   validate(payDepositValidattion),
+   bookingController.createDepositPaymentUrl);
 
 router.post(
   "/hold",

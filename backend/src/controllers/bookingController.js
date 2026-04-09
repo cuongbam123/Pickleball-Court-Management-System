@@ -15,6 +15,27 @@ const getBookings = async (req, res, next) => {
   }
 };
 
+const createDepositPaymentUrl = async (req, res, next) => {
+  try {
+    const bookingId = req.params.id;
+    const body = req.body;
+    const user = req.user;
+    const result = await bookingService.createDepositPaymentUrl(
+      bookingId,
+      body,
+      req,
+      user,
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Tạo URL thanh toán cọc thành công",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const holdBooking = async (req, res, next) => {
   try {
     const result = await bookingService.holdBooking(req.body, req.user);
@@ -82,5 +103,6 @@ module.exports = {
   holdBooking,
   updateBookingStatus,
   cancelBooking,
+  createDepositPaymentUrl,
 
 };

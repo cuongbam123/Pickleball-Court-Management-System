@@ -1,34 +1,28 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
-const { parseISO, isValid, isBefore } = require("date-fns");
+const querystring = require("qs");
+const { parseISO, isValid, isBefore, addMinutes } = require("date-fns");
 const { format, toZonedTime } = require("date-fns-tz");
 const { differenceInHours } = require("date-fns");
 const Booking = require("../models/bookings");
 const Court = require("../models/court");
+const Order = require("../models/orders");
 const PricingRule = require("../models/pricing_rules");
-const TIMEZONE = "Asia/Ho_Chi_Minh";
 const AuditLog = require("../models/audit_logs");
+TIMEZONE = "Asia/Ho_Chi_Minh";
+
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
 
-  const startOfDay = fromZonedTime(`${date}T00:00:00`, TIMEZONE);
-  const endOfDay = fromZonedTime(`${date}T23:59:59.999`, TIMEZONE);
-
-  if (isNaN(startOfDay.getTime()) || isNaN(endOfDay.getTime())) {
-    const error = new Error("date không hợp lệ");
-    error.statusCode = 400;
-    throw error;
+  if (date === null || date === undefined) {
+    const date = new Date();
   }
-
+  console.log("Received date query parameter:", date);
   const filter = {
     branch_id,
     is_deleted: false,
     status: { $ne: "cancelled" },
-    $and: [
-      { start_time: { $lt: endOfDay } },
-      { end_time: { $gt: startOfDay } },
-    ],
   };
 
   if (court_id) {
@@ -46,6 +40,8 @@ const getBookings = async (query, user) => {
       .lean(),
     Booking.countDocuments(filter),
   ]);
+
+console.log("Bookings retrieved from database:", bookings);
 
   const isAdminOrStaff =
     user && (user.role === "admin" || user.role === "staff");
@@ -221,10 +217,13 @@ const holdBooking = async (body, user) => {
         const overlapDurationMins = overlapEnd - overlapStart;
         totalPrice += (overlapDurationMins / 60) * rule.price_per_hour;
         dayCalculatedMins += overlapDurationMins;
+        console.log(`Áp dụng rule ${rule._id} cho khoảng ${overlapStart} - ${overlapEnd} (${overlapDurationMins} phút) với giá ${rule.price_per_hour}/giờ`);
       }
     }
     // ss tgian
     const segmentDuration = endMins - startMins;
+console.log('dayCalculatedMins:', dayCalculatedMins, 'segmentDuration:', segmentDuration);
+
     if (dayCalculatedMins < segmentDuration) {
       const error = new Error(
         `Có khung giờ chưa được thiết lập giá vào ngày ${currentStart.toLocaleDateString()}. Vui lòng liên hệ quản lý.`,
@@ -232,6 +231,8 @@ const holdBooking = async (body, user) => {
       error.statusCode = 400;
       throw error;
     }
+
+
 
     currentStart = new Date(currentEnd.getTime() + 1);
   }
@@ -254,13 +255,12 @@ const holdBooking = async (body, user) => {
     finalHoldToken = null;
   }
 
-  // UPDATE thanh toán cọc(chưa có trang thanh toán)
-
   // AICD transaction vs overlap
   const session = await mongoose.startSession();
 
   try {
     let createdBooking = null;
+    let createdOrder = null;
     // dùng Replica Set
     await session.withTransaction(async () => {
       const bufferMs = buffer_time * 60 * 1000;
@@ -315,7 +315,8 @@ const holdBooking = async (body, user) => {
       );
 
       createdBooking = createdDocs[0];
-    });
+      });
+
     const draftOrder = {
       booking_id: createdBooking._id,
       user_id: user.userId,
@@ -328,6 +329,26 @@ const holdBooking = async (body, user) => {
       is_temporary: true,
     };
 
+    await AuditLog.create({
+        action: "create_booking",
+        user_id: user.userId,
+        target_collection: "bookings",
+        target_id: createdBooking._id,
+        old_value: null, 
+        new_value: {
+            user_id: createdBooking.user_id,
+            court_id: createdBooking.court_id,
+            branch_id: createdBooking.branch_id,
+            start_time: createdBooking.start_time,
+            end_time: createdBooking.end_time,
+            status: createdBooking.status,
+            deposit_amount: createdBooking.deposit_amount,
+            total_court_price: createdBooking.total_court_price,
+            hold_token: createdBooking.hold_token,
+        },
+        is_deleted: false,
+    });
+
     return {
       booking_id: createdBooking._id,
       status: createdBooking.status,
@@ -335,8 +356,147 @@ const holdBooking = async (body, user) => {
       deposit_amount: createdBooking.deposit_amount,
       hold_token: createdBooking.hold_token,
       expires_at: createdBooking.status === "holding" ? expires_at : null,
-      draft_order: draftOrder,
+      order: createdOrder ? createdOrder : draftOrder,
     };
+  } catch (error) {
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+};
+
+const createDepositPaymentUrl = async (bookingId, body, req, user) => {
+  const { payment_method, redirect_url } = body;
+
+  if (payment_method !== "vnpay") {
+    const error = new Error("Phương thức thanh toán không được hỗ trợ");
+    error.statusCode = 400;
+    throw error;
+  }
+  const booking = await Booking.findById(bookingId);
+  if (!booking || booking.is_deleted)
+    throw new Error("Không tìm thấy thông tin đặt sân");
+
+  const currentUserId = user.userId;
+  if (booking.user_id.toString() !== currentUserId) {
+    throw new Error("Bạn không có quyền thanh toán cho lịch đặt sân này");
+  }
+
+  if (booking.status !== "holding") {
+    throw new Error(
+      "Chỉ những lịch đặt đang giữ chỗ mới có thể thanh toán cọc",
+    );
+  }
+  const tmnCode = process.env.VNP_TMN_CODE;
+  const secretKey = process.env.VNP_HASH_SECRET;
+  const vnpUrl = process.env.VNP_URL;
+
+  let ipAddr =
+    req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+  if (ipAddr === "::1") {
+    ipAddr = "127.0.0.1";
+  }
+
+  const now = new Date();
+  const createDate = format(toZonedTime(now, TIMEZONE), "yyyyMMddHHmmss");
+  const expireDate = format(
+    toZonedTime(new Date(now.getTime() + 10 * 60 * 1000), TIMEZONE),
+    "yyyyMMddHHmmss",
+  );
+
+  const amount = Math.round(booking.deposit_amount * 100);
+
+  let vnp_Params = {
+    vnp_Version: "2.1.0",
+    vnp_Command: "pay",
+    vnp_TmnCode: tmnCode,
+    vnp_Locale: "vn",
+    vnp_CurrCode: "VND",
+    vnp_TxnRef: booking._id.toString(),
+    vnp_OrderInfo: `Thanh toan tien coc lich dat san ${booking._id}`,
+    vnp_OrderType: "billpayment",
+    vnp_Amount: amount,
+    vnp_ReturnUrl: redirect_url,
+    vnp_IpAddr: ipAddr,
+    vnp_CreateDate: createDate,
+    vnp_ExpireDate: expireDate,
+  };
+
+  console.log("=== DỮ LIỆU GỬI SANG VNPAY ===");
+  console.log(vnp_Params);
+  // sắp xếp params vs tạo chữ kí
+  vnp_Params = sortObject(vnp_Params);
+  const signData = querystring.stringify(vnp_Params, { encode: false });
+  const hmac = crypto.createHmac("sha512", secretKey);
+  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+  vnp_Params["vnp_SecureHash"] = signed;
+
+  const paymentUrl =
+    vnpUrl + "?" + querystring.stringify(vnp_Params, { encode: false });
+
+  return {
+    payment_url: paymentUrl,
+    expires_at: addMinutes(now, 10),
+  };
+};
+
+function sortObject(obj) {
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) str.push(encodeURIComponent(key));
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  }
+  return sorted;
+}
+
+const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      const booking = await Booking.findById(bookingId).session(session);
+
+      if (!booking) {
+        throw new Error("01");
+      }
+
+      if (booking.deposit_amount !== vnp_Amount) {
+        throw new Error("04");
+      }
+
+      if (booking.status !== "holding") {
+        throw new Error("02");
+      }
+
+      booking.status = "deposited";
+      booking.hold_token = null;
+      await booking.save({ session });
+
+      await Order.create(
+        [
+          {
+            booking_id: booking._id,
+            user_id: booking.user_id,
+            branch_id: booking.branch_id,
+            total_court_fee: booking.total_court_price,
+            total_pos_fee: 0,
+            deposit_paid: booking.deposit_amount,
+            final_amount_due:
+              booking.total_court_price - booking.deposit_amount,
+            payment_status: "deposit_paid",
+            is_temporary: false,
+          },
+        ],
+        { session },
+      );
+    });
+
+    return true;
   } catch (error) {
     throw error;
   } finally {
@@ -476,7 +636,6 @@ const cancelBooking = async (bookingId, reason, user) => {
           throw error;
         }
 
-
         if (now >= booking.start_time) {
           const error = new Error(
             "Đã qua giờ bắt đầu, bạn không thể tự hủy lịch. Vui lòng liên hệ quản lý.",
@@ -544,7 +703,7 @@ const cancelBooking = async (bookingId, reason, user) => {
           { session },
         );
       }
-      
+
       await booking.save({ session });
 
       // lưu log
@@ -593,4 +752,6 @@ module.exports = {
   holdBooking,
   updateBookingStatus,
   cancelBooking,
+  createDepositPaymentUrl,
+  confirmBookingDeposit,
 };
