@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import Table from "../../components/ui/Table";
 import useAdminStaff from "../../features/admin/hooks/useAdminStaff";
+import SelectFilter from "../../components/ui/Filter";
 import AdminStaffForm from "../../features/auth/components/UpdateForm";
 import Modal from "../../components/ui/Modal";
 import clsx from "clsx";
-
 
 const getBranchId = (branch) => {
   if (!branch) return null;
@@ -14,21 +14,16 @@ const getBranchId = (branch) => {
 };
 
 const AdminStaffPage = () => {
-  const {
-    users,
-    branchNames,
-    isLoading,
-    handleDeleteUser,
-    handleUpdateUser,
-  } = useAdminStaff();
+  const { users, branchNames, isLoading, handleDeleteUser, handleUpdateUser } =
+    useAdminStaff();
 
   const [viewMode, setViewMode] = useState("table");
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [selectedBranch, setSelectedBranch] = useState("");
 
-  const selectedUser =
-    users.find((user) => user._id === userToUpdate) || null;
+  const selectedUser = users.find((user) => user._id === userToUpdate) || null;
 
   const getBranchName = (user) => {
     if (
@@ -52,16 +47,16 @@ const AdminStaffPage = () => {
     setUserToDelete(null);
     setShowDeleteModal(false);
   };
-const handleSubmitUpdate = async (userId, formData) => {
+  const handleSubmitUpdate = async (userId, formData) => {
     const result = await handleUpdateUser(userId, formData);
     console.log("Update result:", result);
 
-    if (result.success) { 
+    if (result.success) {
       alert("Cập nhật thành công");
       setUserToUpdate(null);
     } else {
       alert("Cập nhật thất bại");
-    } 
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -76,6 +71,18 @@ const handleSubmitUpdate = async (userId, formData) => {
       alert("Xóa thất bại");
     }
   };
+  const handleBranchChange = (value) => {
+    setSelectedBranch(value);
+  };
+  const filteredUsers = users.filter((user) => {
+    if (selectedBranch) {
+      const userBranchId = getBranchId(user.branch_id);
+      if (userBranchId !== selectedBranch) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const columns = [
     { header: "Tên", accessor: "full_name" },
@@ -85,7 +92,10 @@ const handleSubmitUpdate = async (userId, formData) => {
       header: "Chi nhánh",
       render: (item) => branchNames[item.branch_id] || "Không xác định",
     },
-    { header: "Vai trò", render: (item) => item.role === "admin" ? "Admin" : "Staff" },
+    {
+      header: "Vai trò",
+      render: (item) => (item.role === "admin" ? "Admin" : "Staff"),
+    },
     {
       header: "Thao tác",
       render: (item) => (
@@ -173,7 +183,7 @@ const handleSubmitUpdate = async (userId, formData) => {
                   "rounded-md p-2 transition-colors",
                   viewMode === "table"
                     ? "bg-slate-100 text-blue-600"
-                    : "text-slate-400 hover:text-slate-600"
+                    : "text-slate-400 hover:text-slate-600",
                 )}
                 title="Dạng bảng"
               >
@@ -200,7 +210,7 @@ const handleSubmitUpdate = async (userId, formData) => {
                   "rounded-md p-2 transition-colors",
                   viewMode === "grid"
                     ? "bg-slate-100 text-blue-600"
-                    : "text-slate-400 hover:text-slate-600"
+                    : "text-slate-400 hover:text-slate-600",
                 )}
                 title="Dạng lưới"
               >
@@ -222,10 +232,23 @@ const handleSubmitUpdate = async (userId, formData) => {
             </div>
           </div>
         </div>
+        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
+        <SelectFilter
+          label="Lọc theo chi nhánh"
+          options={Object.entries(branchNames).map(([id, name]) => ({
+            value: id,
+            label: name,
+          }))}
+          value={selectedBranch}
+          onChange={handleBranchChange}
+          className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm hover:shadow-md transition-shadow"
+          placeholder="Tất cả chi nhánh"
+        />
+        </div>
 
         <Table
           columns={columns}
-          data={users}
+          data={filteredUsers}
           loading={isLoading}
           rowKey="_id"
           viewMode={viewMode}
