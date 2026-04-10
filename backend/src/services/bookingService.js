@@ -9,8 +9,8 @@ const Court = require("../models/court");
 const Order = require("../models/orders");
 const PricingRule = require("../models/pricing_rules");
 const AuditLog = require("../models/audit_logs");
+const User = require("../models/users");
 TIMEZONE = "Asia/Ho_Chi_Minh";
-
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
@@ -18,16 +18,19 @@ const getBookings = async (query, user) => {
   if (date === null || date === undefined) {
     const date = new Date();
   }
-  console.log("Received date query parameter:", date);
   const filter = {
-    branch_id,
     is_deleted: false,
     status: { $ne: "cancelled" },
   };
 
+  if (branch_id) {
+    filter.branch_id = branch_id;
+  }
+
   if (court_id) {
     filter.court_id = court_id;
   }
+
   const skip = (page - 1) * limit;
 
   const [bookings, total_records] = await Promise.all([
@@ -40,8 +43,6 @@ const getBookings = async (query, user) => {
       .lean(),
     Booking.countDocuments(filter),
   ]);
-
-console.log("Bookings retrieved from database:", bookings);
 
   const isAdminOrStaff =
     user && (user.role === "admin" || user.role === "staff");
@@ -68,6 +69,31 @@ console.log("Bookings retrieved from database:", bookings);
       total_pages: Math.ceil(total_records / limit),
     },
   };
+};
+
+const getBookingDetail = async (bookingId, user) => {
+  const booking = await Booking.findById(bookingId)
+    .populate("court_id", "name")
+    .populate("user_id", "full_name email phone_number")
+    .lean();
+  if (!booking || booking.is_deleted) {
+    const error = new Error("Không tìm thấy thông tin đặt sân");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const isAdminOrStaff =
+    user &&
+    (user.role === "admin" ||
+      user.role === "staff" ||
+      booking.user_id._id.toString() === user.userId);
+  if (!isAdminOrStaff) {
+    const error = new Error("Bạn không có quyền xem chi tiết đặt sân này");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return booking;
 };
 
 const holdBooking = async (body, user) => {
@@ -124,9 +150,9 @@ const holdBooking = async (body, user) => {
     error.statusCode = 404;
     throw error;
   }
-  if (court.status !== "active") {
+  if (court.status !== "active" && court.tagStatus !== "available") {
     const error = new Error(
-      "Sân đang bảo trì, vui lòng chọn sân khác hoặc liên hệ quản lý.",
+      "San hiện không thể đặt được vì đang bảo trì hoặc đã có người đặt. Vui lòng chọn sân khác hoặc liên hệ quản lý.",
     );
     error.statusCode = 400;
     throw error;
@@ -217,12 +243,19 @@ const holdBooking = async (body, user) => {
         const overlapDurationMins = overlapEnd - overlapStart;
         totalPrice += (overlapDurationMins / 60) * rule.price_per_hour;
         dayCalculatedMins += overlapDurationMins;
-        console.log(`Áp dụng rule ${rule._id} cho khoảng ${overlapStart} - ${overlapEnd} (${overlapDurationMins} phút) với giá ${rule.price_per_hour}/giờ`);
+        console.log(
+          `Áp dụng rule ${rule._id} cho khoảng ${overlapStart} - ${overlapEnd} (${overlapDurationMins} phút) với giá ${rule.price_per_hour}/giờ`,
+        );
       }
     }
     // ss tgian
     const segmentDuration = endMins - startMins;
-console.log('dayCalculatedMins:', dayCalculatedMins, 'segmentDuration:', segmentDuration);
+    console.log(
+      "dayCalculatedMins:",
+      dayCalculatedMins,
+      "segmentDuration:",
+      segmentDuration,
+    );
 
     if (dayCalculatedMins < segmentDuration) {
       const error = new Error(
@@ -231,8 +264,6 @@ console.log('dayCalculatedMins:', dayCalculatedMins, 'segmentDuration:', segment
       error.statusCode = 400;
       throw error;
     }
-
-
 
     currentStart = new Date(currentEnd.getTime() + 1);
   }
@@ -315,7 +346,7 @@ console.log('dayCalculatedMins:', dayCalculatedMins, 'segmentDuration:', segment
       );
 
       createdBooking = createdDocs[0];
-      });
+    });
 
     const draftOrder = {
       booking_id: createdBooking._id,
@@ -330,23 +361,23 @@ console.log('dayCalculatedMins:', dayCalculatedMins, 'segmentDuration:', segment
     };
 
     await AuditLog.create({
-        action: "create_booking",
-        user_id: user.userId,
-        target_collection: "bookings",
-        target_id: createdBooking._id,
-        old_value: null, 
-        new_value: {
-            user_id: createdBooking.user_id,
-            court_id: createdBooking.court_id,
-            branch_id: createdBooking.branch_id,
-            start_time: createdBooking.start_time,
-            end_time: createdBooking.end_time,
-            status: createdBooking.status,
-            deposit_amount: createdBooking.deposit_amount,
-            total_court_price: createdBooking.total_court_price,
-            hold_token: createdBooking.hold_token,
-        },
-        is_deleted: false,
+      action: "create_booking",
+      user_id: user.userId,
+      target_collection: "bookings",
+      target_id: createdBooking._id,
+      old_value: null,
+      new_value: {
+        user_id: createdBooking.user_id,
+        court_id: createdBooking.court_id,
+        branch_id: createdBooking.branch_id,
+        start_time: createdBooking.start_time,
+        end_time: createdBooking.end_time,
+        status: createdBooking.status,
+        deposit_amount: createdBooking.deposit_amount,
+        total_court_price: createdBooking.total_court_price,
+        hold_token: createdBooking.hold_token,
+      },
+      is_deleted: false,
     });
 
     return {
@@ -475,6 +506,7 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
 
       booking.status = "deposited";
       booking.hold_token = null;
+      booking.payment_method = "vnpay";
       await booking.save({ session });
 
       await Order.create(
@@ -494,6 +526,21 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
         ],
         { session },
       );
+      await AuditLog.create({
+        action: "pay_deposit",
+        user_id: booking.user_id,
+        target_collection: "bookings",
+        target_id: booking._id,
+        old_value: {
+          status: "holding",
+          deposit_amount: booking.deposit_amount,
+        },
+        new_value: {
+          status: "deposited",
+          deposit_amount: booking.deposit_amount,
+        },
+        is_deleted: false,
+      });
     });
 
     return true;
@@ -538,7 +585,7 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
 
         // Kiểm tra thời gian check-in
         const diffMins = (booking.start_time - now) / (1000 * 60);
-        if (diffMins > 30 && user.role !== "admin") {
+        if (diffMins > 30 && user.role !== "admin" && user.role !== "staff") {
           const error = new Error(
             "Còn quá sớm để check-in. Vui lòng quay lại trước giờ bắt đầu 30 phút.",
           );
@@ -549,28 +596,6 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
         await Court.findByIdAndUpdate(
           booking.court_id,
           { tagStatus: "playing" },
-          { session },
-        );
-      } else if (newStatus === "completed") {
-        if (currentStatus === "playing") {
-          isValidTransition = true;
-          actionName = "complete_booking";
-        } else {
-          errorMessage = `Không thể hoàn thành. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'playing'.`;
-        }
-        if (!["admin", "staff"].includes(user.role)) {
-          const error = new Error(
-            "Chỉ nhân viên hoặc quản lý mới được phép thao tác thanh toán và trả sân.",
-          );
-          error.statusCode = 403;
-          throw error;
-        }
-
-        // xử lí payment-status thành công(chưa xử lí)
-
-        await Court.findByIdAndUpdate(
-          booking.court_id,
-          { tagStatus: "available" },
           { session },
         );
       }
@@ -688,10 +713,25 @@ const cancelBooking = async (bookingId, reason, user) => {
         isRefundable = false;
       }
 
+      const credit = await User.findOne({ _id: user.userId })
+        .select("credit")
+        .lean();
+      user.credit = (credit?.credit || 0) + refundAmount;
+      await User.updateOne(
+        { _id: user.userId },
+        { credit: user.credit },
+        { session },
+      );
+
+      console.log(
+        `Hủy booking ${booking._id} - refundAmount: ${refundAmount}, refundPercentage: ${refundPercentage}%, isRefundable: ${isRefundable}, user credit sau khi hoàn cọc: ${user.credit}`,
+      );
+
       // cập nhật thông tin
       booking.status = "cancelled";
-      booking.cancelled_by = user.userId;
       booking.cancel_at = now;
+      booking.refund_status = "refunded";
+      booking.cancelled_by = user.userId;
       // trả sân
       if (
         now >= new Date(booking.start_time.getTime() - 30 * 60000) &&
@@ -750,6 +790,7 @@ const cancelBooking = async (bookingId, reason, user) => {
 module.exports = {
   getBookings,
   holdBooking,
+  getBookingDetail,
   updateBookingStatus,
   cancelBooking,
   createDepositPaymentUrl,

@@ -15,6 +15,20 @@ const getBookings = async (req, res, next) => {
   }
 };
 
+const getBookingDetail = async (req, res, next) => {
+  try {
+    const bookingId = req.params.id;
+    const result = await bookingService.getBookingDetail(bookingId, req.user);
+    return res.status(200).json({
+      success: true,
+      message: "Lấy chi tiết đặt sân thành công",
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const createDepositPaymentUrl = async (req, res, next) => {
   try {
     const bookingId = req.params.id;
@@ -101,6 +115,7 @@ const cancelBooking = async (req, res, next) => {
 module.exports = {
   getBookings,
   holdBooking,
+  getBookingDetail,
   updateBookingStatus,
   cancelBooking,
   createDepositPaymentUrl,

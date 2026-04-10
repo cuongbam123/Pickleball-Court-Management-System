@@ -4,9 +4,11 @@ const querystring = require("qs");
 const { parse, addMinutes } = require("date-fns");
 const { formatInTimeZone } = require("date-fns-tz");
 
+const Court = require("../models/court");
 const Order = require("../models/orders");
 const Booking = require("../models/bookings");
 const Product = require("../models/products");
+const AuditLog = require("../models/audit_logs");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -171,7 +173,28 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
       await booking.save({ session });
     }
 
+    const court = await Court.findById(booking.court_id).session(session);
+    if (court) {
+      court.tagStatus = "available";
+      await court.save({ session });
+    }
     await session.commitTransaction();
+
+    await AuditLog.create({
+      action: "confirm_order_final_payment",
+      user_id: order.user_id,
+      target_collection: "orders",
+      target_id: order._id,
+      old_value: {
+        payment_status: "pending_final",
+        payment_method: null,
+      },
+      new_value: {
+        payment_status: "fully_paid",
+        payment_method: "vnpay",
+      },
+    });
+
     return true;
   } catch (error) {
     await session.abortTransaction();
@@ -181,7 +204,7 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
   }
 };
 
-const checkoutOrder = async (orderId, payment_method, amount_received) => {
+const checkoutOrder = async (orderId, payment_method, amount_received) => { // thiếu check role staff
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -211,6 +234,22 @@ const checkoutOrder = async (orderId, payment_method, amount_received) => {
     }
 
     await session.commitTransaction();
+
+    await AuditLog.create({
+      action: "checkout_order",
+      user_id: order.user_id,
+      target_collection: "orders",
+      target_id: order._id,
+      old_value: {
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+      },
+      new_value: {
+        payment_status: "fully_paid",
+        payment_method,
+      },
+    });
+
     return order;
   } catch (error) {
     await session.abortTransaction();

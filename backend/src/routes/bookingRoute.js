@@ -7,6 +7,7 @@ const { validate, authenticate, optionalAuth } = require("../middlewares");
 const {
   getBookingsValidation,
   holdBookingValidation,
+  getBookingDetailValidation,
   updateBookingStatusValidation,
   cancelBookingValidation,
   payDepositValidattion,
@@ -25,6 +26,13 @@ router.post(
    authenticate,
    validate(payDepositValidattion),
    bookingController.createDepositPaymentUrl);
+
+router.get(
+  "/:id",
+  authenticate,
+  validate(getBookingDetailValidation),
+  bookingController.getBookingDetail
+);
 
 router.post(
   "/hold",

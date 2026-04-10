@@ -11,6 +11,17 @@ const getBookingsValidation = {
     limit: Joi.number().integer().min(1).max(100).default(100),
   }),
 };
+
+const getBookingDetailValidation = {
+  params: Joi.object({
+    id: Joi.string().pattern(objectIdRegex).required().messages({
+      "any.required": "booking_id là bắt buộc trên URL",
+      "string.empty": "booking_id không được để trống",
+      "string.pattern.base": "booking_id không hợp lệ (Phải là chuẩn MongoDB ObjectId)",
+    }),
+  }),
+};
+
 const payDepositValidattion = {
   params: Joi.object({
     id: Joi.string().pattern(objectIdRegex).required().messages({
@@ -93,6 +104,11 @@ const cancelBookingValidation = {
       "any.required": "Lý do hủy là bắt buộc",
       "string.empty": "Lý do hủy không được để trống",
     }),
+    cancelled_by: Joi.string().pattern(objectIdRegex).required().messages({
+      "any.required": "cancelled_by (người hủy) là bắt buộc",
+      "string.empty": "cancelled_by (người hủy) không được để trống",
+      "string.pattern.base": "cancelled_by phải là một ObjectId hợp lệ",
+    }),
   }),
   params: Joi.object({
     id: Joi.string().pattern(objectIdRegex).required().messages({
@@ -104,6 +120,7 @@ const cancelBookingValidation = {
 module.exports = {
   getBookingsValidation,
   holdBookingValidation,
+  getBookingDetailValidation,
   payDepositValidattion,
   updateBookingStatusValidation,
   cancelBookingValidation,
