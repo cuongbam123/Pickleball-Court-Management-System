@@ -7,6 +7,10 @@ const { validate, authenticate, optionalAuth } = require("../middlewares");
 const {
   getBookingsValidation,
   holdBookingValidation,
+  getBookingDetailValidation,
+  updateBookingStatusValidation,
+  cancelBookingValidation,
+  payDepositValidattion,
 } = require("../validations/bookingValidation");
 
 // public
@@ -18,10 +22,35 @@ router.get(
 );
 
 router.post(
+  '/:id/pay-deposit',
+   authenticate,
+   validate(payDepositValidattion),
+   bookingController.createDepositPaymentUrl);
+
+router.get(
+  "/:id",
+  authenticate,
+  validate(getBookingDetailValidation),
+  bookingController.getBookingDetail
+);
+
+router.post(
   "/hold",
   authenticate,
   validate(holdBookingValidation),
   bookingController.holdBooking
 );
 
+router.patch(
+  "/:id/status",
+  authenticate,
+  validate(updateBookingStatusValidation),
+  bookingController.updateBookingStatus
+);
+router.patch(
+  "/:id/cancel",
+  authenticate,
+  validate(cancelBookingValidation),
+  bookingController.cancelBooking
+);
 module.exports = router;

@@ -9,6 +9,10 @@ const pricingRuleRoute = require("./routes/pricingRuleRoutes");
 const bookingRoute = require("./routes/bookingRoute");
 const courtRoutes = require("./routes/courtRoutes");
 const productRoutes = require("./routes/productRoutes");
+const paymentRoute = require("./routes/vnpayRoutes");
+const orderRoute = require("./routes/orderRoutes");
+const webhookRoute = require("./routes/webhookRoute");
+
 const app = express();
 
 // middlewares
@@ -21,6 +25,9 @@ app.use("/api/v1/users", userRoute);
 app.use("/api/v1/branches", branchRoute);
 app.use("/api/v1/pricing-rules", pricingRuleRoute);
 app.use("/api/v1/bookings", bookingRoute);
+app.use("/api/v1/payments", paymentRoute);
+app.use("/api/v1/orders", orderRoute);
+app.use("/api/v1/webhooks", webhookRoute);
 
 
 app.use("/api/v1/courts", courtRoutes)
