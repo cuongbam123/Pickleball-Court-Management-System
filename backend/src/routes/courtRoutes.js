@@ -9,9 +9,11 @@ const {
   deleteCourt,
   getCourtById,
   updateCourtTagStatus,
+  getAllCourts,
 } = require("../validations/courtValidation");
 
 //public
+router.get("/", validate(getAllCourts), courtController.getAllCourts,);
 router.get("/:id", validate(getCourtById), courtController.getCourtById);
 
 //admiin

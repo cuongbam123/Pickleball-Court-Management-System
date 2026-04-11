@@ -1,132 +1,89 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useAuth } from "../../../hooks/useAuth";
-import { updateMe } from "../api/userApi";
-import { getMe } from "../api/userApi";
+import React, { useEffect, useState } from "react";
 import { useAuthStore } from "../../../store/authStore";
+import { getMe, updateMe } from "../api/userApi"; // Đảm bảo rằng updateMe đã được import đúng
 import Button from "../../../components/ui/Button";
-
-const initialPasswordForm = {
-  old_password: "",
-  new_password: "",
-  confirm_new_password: "",
-};
+import { getBranchById } from "../../facility/api/branchApi";
 
 const ProfileForm = () => {
-  const { user } = useAuth();
-  const setAuth = useAuthStore((s) => s.setAuth);
-
+  const { setAuth } = useAuthStore();
+  const [user, setUser] = useState(null);
+  const [branchName, setBranchName] = useState(null);
+  const [fullName, setFullName] = useState("");
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [fullName, setFullName] = useState("");
-  const [passwordForm, setPasswordForm] = useState(initialPasswordForm);
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await getMe(); // Gọi API để lấy dữ liệu người dùng
+        const newUser = response.data?.data || response.data;
+        setUser(newUser);
+        setFullName(newUser?.full_name || "");
+        console.log("Dữ liệu người dùng đã được tải:", newUser);
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu người dùng:", error);
+      }
+    };
+
+    fetchUserData();
+  }, []);
 
   useEffect(() => {
-    if (user?.full_name) {
-      setFullName(user.full_name);
-    }
-  }, [user]);
-
-  const hasNameChanged = useMemo(() => {
-    return fullName.trim() !== (user?.full_name || "").trim();
-  }, [fullName, user]);
-
-  const isTypingPassword = useMemo(() => {
-    return (
-      passwordForm.old_password ||
-      passwordForm.new_password ||
-      passwordForm.confirm_new_password
-    );
-  }, [passwordForm]);
-
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const resetForm = () => {
-    setFullName(user?.full_name || "");
-    setPasswordForm(initialPasswordForm);
-    setIsEditing(false);
-  };
-
-  const validateForm = () => {
-    if (!hasNameChanged && !isTypingPassword) {
-      return "Không có dữ liệu thay đổi";
-    }
-
-    if (isTypingPassword) {
-      const { old_password, new_password, confirm_new_password } = passwordForm;
-
-      if (!old_password || !new_password || !confirm_new_password) {
-        return "Vui lòng nhập đầy đủ mật khẩu cũ, mật khẩu mới và xác nhận mật khẩu";
+    const fetchBranchName = async () => {
+      if (user?.branch_id) {
+        try {
+          const res = await getBranchById(user.branch_id);
+          const branchData = res.data?.data || res.data;
+          setBranchName(branchData?.name || "Không xác định");
+        } catch (error) {
+          console.error("Lỗi khi lấy tên chi nhánh:", error);
+          setBranchName("Không xác định");
+        }
       }
+    };
 
-      if (new_password !== confirm_new_password) {
-        return "Mật khẩu xác nhận không khớp";
-      }
-
-      if (new_password.length < 6) {
-        return "Mật khẩu mới phải có ít nhất 6 ký tự";
-      }
-    }
-
-    return null;
-  };
-
-  const buildPayload = () => {
-    const payload = {};
-
-    if (hasNameChanged) {
-      payload.full_name = fullName.trim();
-    }
-
-    if (isTypingPassword) {
-      payload.old_password = passwordForm.old_password;
-      payload.new_password = passwordForm.new_password;
-      payload.confirm_new_password = passwordForm.confirm_new_password;
-    }
-
-    return payload;
-  };
+    fetchBranchName();
+  }, [user?.branch_id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const errorMessage = validateForm();
-    if (errorMessage) {
-      alert(errorMessage);
-      return;
-    }
-
-    const payload = buildPayload();
-
     try {
       setLoading(true);
+      const payload = {
+        full_name: fullName,
+        phone: user?.phone,
+        password: user?.password,
+        old_password: oldPassword,
+        new_password: newPassword,
+        confirm_new_password: confirmPassword,
+      };
 
+      // Gọi API để cập nhật thông tin người dùng (ví dụ: updateMe)
       const res = await updateMe(payload);
-      const data = res.data?.data || res.data;
 
+      alert("Cập nhật thông tin thành công");
+
+      // Lấy lại dữ liệu người dùng mới nhất từ API
       const newUserRes = await getMe();
       const newUser = newUserRes.data?.data || newUserRes.data;
-      const { access_token, refresh_token } = useAuthStore.getState();
 
+      // Cập nhật lại thông tin người dùng và token
       setAuth({
         user: newUser,
-        access_token,
-        refresh_token,
+        access_token: "your_access_token", // Thay bằng token thực tế
+        refresh_token: "your_refresh_token", // Thay bằng token thực tế
       });
 
-      alert(data?.message || "Cập nhật thông tin thành công");
-
-      setPasswordForm(initialPasswordForm);
+      setUser(newUser);
+      setFullName(newUser?.full_name || "");
       setIsEditing(false);
     } catch (error) {
-      console.error("update error:", error);
-      alert(error?.response?.data?.message || "Cập nhật thất bại");
+      console.error("Lỗi khi cập nhật:", error);
+      alert("Cập nhật thất bại");
     } finally {
       setLoading(false);
     }
@@ -149,10 +106,30 @@ const ProfileForm = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <InfoItem label="Họ tên" value={user?.full_name || "Chưa có"} />
               <InfoItem label="Email" value={user?.email || "Chưa có"} />
-              <InfoItem label="Vai trò" value={user?.role || "Chưa có"} />
-              <InfoItem label="Branch" value={user?.branch_id || "Chưa có"} />
-            </div>
+              <InfoItem
+                label="Số điện thoại"
+                value={user?.phone || "Chưa có"}
+              />
+              {user?.role === "customer" && (
+                <>
+                  <InfoItem
+                    label="Điểm tích lũy"
+                    value={user?.loyalty_points || "0"}
+                  />
+                  <InfoItem label="Hạng mức" value={user?.loyalty_tier} />
+                  <InfoItem label="Hạng kỹ năng" value={user?.skill_rank} />
+                  <InfoItem label="Điểm elo" value={user?.elo_score} />
+                  <InfoItem
+                    label="Số dư tài khoản"
+                    value={user?.credit || "Chưa có"}
+                  />
+                </>
+              )}
 
+              {user?.role === "staff" && (
+                <InfoItem label="Chi nhánh" value={branchName || "Chưa có"} />
+              )}
+            </div>
             <div className="pt-2">
               <Button onClick={() => setIsEditing(true)}>
                 Chỉnh sửa thông tin
@@ -171,58 +148,61 @@ const ProfileForm = () => {
                 className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500"
               />
             </FormGroup>
-
-            <div className="border-t border-slate-200 pt-5">
-              <h3 className="text-lg font-semibold text-slate-900">
-                Đổi mật khẩu
-              </h3>
-              <p className="mt-1 text-sm text-slate-500">
-                Bỏ trống nếu bạn không muốn đổi mật khẩu
-              </p>
-            </div>
-
-            <FormGroup label="Mật khẩu cũ">
+            <FormGroup label="Số điện thoại">
               <input
-                type="password"
-                name="old_password"
-                value={passwordForm.old_password}
-                onChange={handlePasswordChange}
-                placeholder="Nhập mật khẩu cũ"
-                autoComplete="current-password"
+                type="text"
+                name="phone"
+                value={user?.phone || ""}
+                onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                placeholder="Nhập số điện thoại"
                 className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500"
               />
             </FormGroup>
 
+            {/* Thêm input cho Mật khẩu */}
+             <FormGroup label="Mật khẩu cũ">
+              <input
+                type="password"
+                name="old_password"
+                value={oldPassword}
+                onChange={(e) => setOldPassword(e.target.value)}
+                placeholder="Nhập mật khẩu cũ"
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500"
+              />
+            </FormGroup>
+
+            {/* Input cho mật khẩu mới */}
             <FormGroup label="Mật khẩu mới">
               <input
                 type="password"
                 name="new_password"
-                value={passwordForm.new_password}
-                onChange={handlePasswordChange}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Nhập mật khẩu mới"
-                autoComplete="new-password"
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500"
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500 gap-2"
               />
             </FormGroup>
 
+            {/* Xác nhận mật khẩu mới */}
             <FormGroup label="Xác nhận mật khẩu mới">
               <input
                 type="password"
-                name="confirm_new_password"
-                value={passwordForm.confirm_new_password}
-                onChange={handlePasswordChange}
+                name="confirm_password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Nhập lại mật khẩu mới"
-                autoComplete="new-password"
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500"
+                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-500 gap-2"
               />
             </FormGroup>
-
             <div className="flex flex-wrap gap-3 pt-2">
               <Button type="submit" loading={loading}>
                 Lưu thay đổi
               </Button>
-
-              <Button type="button" variant="secondary" onClick={resetForm}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsEditing(false)}
+              >
                 Hủy
               </Button>
             </div>
@@ -233,24 +213,20 @@ const ProfileForm = () => {
   );
 };
 
-const InfoItem = ({ label, value }) => {
-  return (
-    <div className="rounded-2xl bg-slate-50 p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 font-medium text-slate-900">{value}</p>
-    </div>
-  );
-};
+const InfoItem = ({ label, value }) => (
+  <div className="rounded-2xl bg-slate-50 p-4">
+    <p className="text-sm text-slate-500">{label}</p>
+    <p className="mt-1 font-medium text-slate-900">{value}</p>
+  </div>
+);
 
-const FormGroup = ({ label, children }) => {
-  return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-};
+const FormGroup = ({ label, children }) => (
+  <div>
+    <label className="mb-2 block text-sm font-medium text-slate-700">
+      {label}
+    </label>
+    {children}
+  </div>
+);
 
 export default ProfileForm;

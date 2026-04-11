@@ -4,9 +4,10 @@ import Sidebar from "../../src/components/layout/Sidebar";
 
 const adminItems = [
   { label: "Tổng quan", to: "/home" },
-  { label: "Quản lý sân", to: "/courts" },
-  { label: "Chi nhánh", to: "/branches" },
-  { label: "Nhân viên", to: "/staff-management" },
+  { label: "Quản lý sân", to: "/admin/courts" },
+  { label: "Chi nhánh", to: "/admin/branches" },
+  { label: "Nhân viên", to: "/admin/staff" },
+  { label: "Tất cả người dùng", to: "/admin/users" },
   { label: "Giá", to: "/pricing" },
   { label: "Giải đấu", to: "/tournaments" },
 ];

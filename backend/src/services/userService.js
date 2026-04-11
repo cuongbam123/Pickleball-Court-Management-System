@@ -1,5 +1,7 @@
 const User = require("../models/users");
 const AuditLog = require("../models/audit_logs");
+const Branch = require("../models/branches");
+const Court = require("../models/court");
 const bcrypt = require("bcrypt");
 class UserService {
   //lấy danh sách user
@@ -183,6 +185,10 @@ class UserService {
     _id: user._id,
     email: user.email,
     full_name: user.full_name,
+    role: user.role,
+    phone: user.phone,
+    branch_id: user.branch_id,
+    credit: user.credit,
     loyalty_points: user.loyalty_points,
     loyalty_tier: user.loyalty_tier,
     skill_rank: user.skill_rank,
@@ -268,6 +274,25 @@ if (isPasswordChanged && !isProfileChanged) {
   }
 return newValue;
 }
+
+//dáata cho dashboard admin
+async getDashboardStats() {
+    const [totalBranches, activeCourts, totalStaff, monthlyRevenue] = await Promise.all([
+      Branch.countDocuments({ is_deleted: false }),
+      Court.countDocuments({ status: "active", is_deleted: false }),
+      User.countDocuments({ role: "staff", is_deleted: false }),
+      Promise.resolve(0) // Chờ module Order để xử lý sau
+    ]);
+
+    return {
+      totalBranches,
+      activeCourts,
+      totalStaff,
+      monthlyRevenue,
+    };
+  }
 }
+
+
 
 module.exports = new UserService();

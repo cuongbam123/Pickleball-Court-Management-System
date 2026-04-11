@@ -7,6 +7,14 @@ import LogoutPage from "../pages/auth/LogoutPage";
 import ProfileForm from "./../features/auth/components/ProfileForm";
 import RoleHomePage from "../pages/Home/RoleHomePage";
 import HomePage from "../pages/Home/HomePage";
+
+//admin
+import AdminHome from "../pages/admin/AdminHome";
+import AdminBranchPage from "../pages/admin/AdminBranchPage";
+import AdminCourtsPage from "../pages/admin/AdminCourtPage";
+import AdminStaffPage from "../pages/admin/AdminStaffPage";
+import AdminUsersPage from "../pages/admin/AdminUsersPage";
+
 const AppRoutes = () => {
   return (
     <BrowserRouter>
@@ -15,14 +23,6 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={["admin"]}>
-              <div>Admin Page</div>
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/profile"
           element={
@@ -36,6 +36,48 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <RoleHomePage />
+            </ProtectedRoute>
+          }
+        />
+
+        //ADMIN
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminHome /> 
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/branches"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminBranchPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/courts"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminCourtsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/staff"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminStaffPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminUsersPage />
             </ProtectedRoute>
           }
         />

@@ -128,5 +128,21 @@ class UserController {
     next(err);
   }
   }
+
+  async getDashboardStats(req, res, next) {
+  try {
+    // Gọi layer Service để lấy data
+    const statsData = await userService.getDashboardStats();
+
+    // Trả về JSON theo đúng chuẩn format yêu cầu
+    res.status(200).json({
+      success: true,
+      data: statsData,
+    });
+  } catch (err) {
+    // Pass lỗi sang Error Handling Middleware tổng của Express
+    next(err);
+  }
+};
 }
 module.exports = new UserController();

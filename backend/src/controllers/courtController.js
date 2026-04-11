@@ -1,5 +1,24 @@
 const courtService = require("../services/courtService");
 
+const getAllCourts = async (req, res, next) => {
+  try {
+    const userRole = req.user?.role;
+    const result = await courtService.getAllCourts(
+      req.query,
+      userRole
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Lấy danh sách tất cả sân thành công",
+      data: result.data,
+      meta: result.meta,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getCourtsByBranch = async (req, res, next) => {
   try {
     const { branchId } = req.params;
@@ -108,6 +127,7 @@ const deleteCourt = async (req, res, next) => {
 };
 
 module.exports = {
+  getAllCourts,
   getCourtsByBranch,
   createCourt,
   getCourtById,
