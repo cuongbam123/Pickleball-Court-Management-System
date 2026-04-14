@@ -12,7 +12,7 @@ const productRoutes = require("./routes/productRoutes");
 const paymentRoute = require("./routes/vnpayRoutes");
 const orderRoute = require("./routes/orderRoutes");
 const webhookRoute = require("./routes/webhookRoute");
-
+const tournamentRoute = require("./routes/tournamentsRoute");
 const app = express();
 
 // middlewares
@@ -28,6 +28,7 @@ app.use("/api/v1/bookings", bookingRoute);
 app.use("/api/v1/payments", paymentRoute);
 app.use("/api/v1/orders", orderRoute);
 app.use("/api/v1/webhooks", webhookRoute);
+app.use("/api/v1/tournaments", tournamentRoute);
 
 
 app.use("/api/v1/courts", courtRoutes)
