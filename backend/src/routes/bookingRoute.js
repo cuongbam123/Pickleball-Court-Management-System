@@ -11,14 +11,22 @@ const {
   updateBookingStatusValidation,
   cancelBookingValidation,
   payDepositValidattion,
+  getAvaliableTimeSlotsValidation,
 } = require("../validations/bookingValidation");
 
+
+router.get(
+  "/avaliable",
+  optionalAuth,
+  validate(getAvaliableTimeSlotsValidation),
+  bookingController.getAvaliadbleTimeSlots,
+);
 // public
 router.get(
   "/",
   optionalAuth,
   validate(getBookingsValidation),
-  bookingController.getBookings
+  bookingController.getBookings,
 );
 
 router.post(

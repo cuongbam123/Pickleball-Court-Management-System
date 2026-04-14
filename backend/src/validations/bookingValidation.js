@@ -117,11 +117,27 @@ const cancelBookingValidation = {
   }),
 };
 
+//calender time slot validation
+const getAvaliableTimeSlotsValidation = {
+  query: Joi.object({
+    court_id: Joi.string().pattern(objectIdRegex).required().messages({
+      "any.required": "court_id là bắt buộc",
+      "string.empty": "court_id là bắt buộc",
+      "string.pattern.base": "court_id không hợp lệ",
+    }),
+    date: Joi.string().isoDate().required().messages({
+      "any.required": "date là bắt buộc",
+      "string.empty": "date là bắt buộc",
+      "string.isoDate": "date phải là một chuỗi ISO date hợp lệ",
+    }),
+  }),
+}; 
 module.exports = {
   getBookingsValidation,
   holdBookingValidation,
   getBookingDetailValidation,
   payDepositValidattion,
+  getAvaliableTimeSlotsValidation,
   updateBookingStatusValidation,
   cancelBookingValidation,
 };
