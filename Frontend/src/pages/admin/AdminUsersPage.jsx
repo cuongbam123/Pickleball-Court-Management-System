@@ -9,10 +9,14 @@ import Modal from "../../components/ui/Modal";
 import SelectFilter from "../../components/ui/Filter";
 
 const AdminUsersPage = () => {
-  const { users, isLoading } = useAdminUsers();
+  const { users, isLoading, fetchUsers } = useAdminUsers();
   const [viewMode, setViewMode] = useState("table");
-  const { branchNames, handleDeleteUser, handleUpdateUser, fetchUsers } =
-    useAdminStaff();
+  const {
+    branchNames,
+    handleDeleteUser,
+    handleUpdateUser,
+    handleUpdateUserRank,
+  } = useAdminStaff();
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
@@ -39,6 +43,22 @@ const AdminUsersPage = () => {
       fetchUsers();
     } else {
       alert("Cập nhật thất bại");
+    }
+    // Nếu là customer, cập nhật rank
+    if (
+      selectedUser.role === "customer" &&
+      formData.rank &&
+      formData.elo_score
+    ) {
+      const rankUpdateResult = await handleUpdateUserRank(userId, {
+        skill_rank: formData.rank,
+        elo_score: formData.elo_score,
+      });
+      if (rankUpdateResult.success) {
+        fetchUsers();
+      } else {
+        alert("Cập nhật rank thất bại");
+      }
     }
   };
   const handleConfirmDelete = async () => {
@@ -76,16 +96,22 @@ const AdminUsersPage = () => {
       render: (item) => branchNames[item.branch_id] || "Không xác định",
     },
     {
+      header: "Rank",
+      render: (user) => user.skill_rank || "Không xác định",
+    },
+    {
+      header: "Hạng thẻ thành viên",
+      render: (user) => user.loyalty_tier || "Không xác định",
+    },
+    {
       header: "Vai trò",
       render: (user) => {
         if (user.role === "admin") {
           return "Admin";
         } else if (user.role === "staff") {
           return "Staff";
-        } else if (user.role === "customer") {
-          return "Customer"; // Hiển thị vai trò customer
         } else {
-          return "Khác"; // Mặc định cho các vai trò khác
+          return "Customer"; // Hiển thị vai trò customer
         }
       },
     },
@@ -163,7 +189,9 @@ const AdminUsersPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Quản lý Người dùng</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Quản lý Người dùng
+            </h1>
             <p className="text-sm text-slate-500">Danh sách các người dùng</p>
           </div>
 
@@ -225,20 +253,20 @@ const AdminUsersPage = () => {
             </div>
           </div>
         </div>
-          <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
-            <SelectFilter
-              label="Lọc theo vai trò"
-              options={[
-                { label: "Admin", value: "admin" },
-                { label: "Staff", value: "staff" },
-                { label: "Customer", value: "customer" },
-              ]}
-              value={selectedRole}
-              onChange={handleRoleChange}
-              placeholder="Tất cả vai trò"
-              className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
+          <SelectFilter
+            label="Lọc theo vai trò"
+            options={[
+              { label: "Admin", value: "admin" },
+              { label: "Staff", value: "staff" },
+              { label: "Customer", value: "customer" },
+            ]}
+            value={selectedRole}
+            onChange={handleRoleChange}
+            placeholder="Tất cả vai trò"
+            className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
 
         <Table
           columns={columns}
@@ -267,7 +295,7 @@ const AdminUsersPage = () => {
       <Modal
         open={showDeleteModal}
         title="Xác nhận xóa"
-        description="Bạn có chắc muốn xóa staff này không?"
+        description="Bạn có chắc muốn xóa người dùng này không?"
         onClose={closeDeleteModal}
         onConfirm={handleConfirmDelete}
         confirmText="Xóa"

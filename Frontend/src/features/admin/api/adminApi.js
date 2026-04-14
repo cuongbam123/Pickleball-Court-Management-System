@@ -18,10 +18,9 @@ export const getUserById = (id) => {
 export const updateUser = (id, data) => {
   return apiClient.put(`/api/v1/users/${id}`, data);
 };
-
 // PATCH /users/:id/rank
 export const updateUserRank = (id, data) => {
-  return apiClient.patch(`/api/v1/users/${id}`, data);
+  return apiClient.patch(`/api/v1/users/${id}/rank`, data);
 };
 
 // DELETE /users/:id
