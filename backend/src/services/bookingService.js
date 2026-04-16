@@ -823,17 +823,12 @@ const getAvaliadbleTimeSlots = async (courtId, date) => {
     .sort({ start_time: 1 })
     .lean();
 
-  // 2. FIX LỖI LOGIC: Bỏ dấu "!" đi
-  if (bookedSlots.length === 0) {
-    return [];
-  }
-
   const bookingIds = bookedSlots.map((slot) => slot._id);
 
   const orders = await Order.find({
     booking_id: { $in: bookingIds },
   })
-    .select("booking_id payment_status") // Lấy order liên quan
+    .select("booking_id payment_status")
     .lean();
 
   const formattedSlots = bookedSlots.map((slot) => {
