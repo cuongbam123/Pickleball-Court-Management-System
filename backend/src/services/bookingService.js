@@ -1,16 +1,22 @@
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const querystring = require("qs");
-const { parseISO, isValid, isBefore, addMinutes } = require("date-fns");
+const {
+  parseISO,
+  isValid,
+  isBefore,
+  addMinutes,
+  startOfDay,
+  endOfDay,
+} = require("date-fns");
 const { format, toZonedTime } = require("date-fns-tz");
-const { differenceInHours } = require("date-fns");
 const Booking = require("../models/bookings");
 const Court = require("../models/court");
 const Order = require("../models/orders");
 const PricingRule = require("../models/pricing_rules");
 const AuditLog = require("../models/audit_logs");
 const User = require("../models/users");
-TIMEZONE = "Asia/Ho_Chi_Minh";
+const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, page = 1, limit = 100 } = query;
@@ -787,6 +793,79 @@ const cancelBooking = async (bookingId, reason, user) => {
   }
 };
 
+const getAvaliadbleTimeSlots = async (courtId, date) => {
+  const start = new Date(`${date}T00:00:00+07:00`);
+  const end = new Date(`${date}T23:59:59.999+07:00`);
+
+  const court = await Court.findById(courtId).lean();
+  if (!court) {
+    throw new Error("Không tìm thấy thông tin sân");
+  }
+  const dayOfWeek = parseInt(format(start, "i", { timeZone: TIMEZONE }), 10);
+  const dayType = dayOfWeek === 0 || dayOfWeek === 6 ? "weekend" : "weekday";
+
+  const pricingRules = await PricingRule.find({
+    court_type: court.type,
+    day_type: dayType,
+  }).lean();
+  // 1. QUERY PHẢI CÓ $OR ĐỂ CHẶN THEO NGÀY
+  const bookedSlots = await Booking.find({
+    court_id: courtId,
+    is_deleted: false,
+    status: { $in: ["holding", "deposited", "playing", "completed"] },
+    $or: [
+      { start_time: { $gte: start, $lte: end } },
+      { end_time: { $gte: start, $lte: end } },
+      { start_time: { $lte: start }, end_time: { $gte: end } },
+    ],
+  })
+    .select("start_time end_time status _id")
+    .sort({ start_time: 1 })
+    .lean();
+
+  // 2. FIX LỖI LOGIC: Bỏ dấu "!" đi
+  if (bookedSlots.length === 0) {
+    return [];
+  }
+
+  const bookingIds = bookedSlots.map((slot) => slot._id);
+
+  const orders = await Order.find({
+    booking_id: { $in: bookingIds },
+  })
+    .select("booking_id payment_status") // Lấy order liên quan
+    .lean();
+
+  const formattedSlots = bookedSlots.map((slot) => {
+    const vnStartTime = toZonedTime(slot.start_time, TIMEZONE);
+    const vnEndTime = toZonedTime(slot.end_time, TIMEZONE);
+
+    const startTimeStr = format(vnStartTime, "HH:mm", { timeZone: TIMEZONE });
+    const endTimeStr = format(vnEndTime, "HH:mm", { timeZone: TIMEZONE });
+
+    // 3. TÌM ORDER: Nếu undefined thì order_id tự thành null (Rất an toàn)
+    const matchedOrder = orders.find(
+      (order) => order.booking_id.toString() === slot._id.toString(),
+    );
+
+    const matchedRule = pricingRules.find(rule => 
+      rule.start_time <= startTimeStr && rule.end_time > startTimeStr
+    );
+    return {
+      booking_id: slot._id,
+      order_id: matchedOrder ? matchedOrder._id : null,
+      start_time: format(vnStartTime, "HH:mm", { timeZone: TIMEZONE }),
+      end_time: format(vnEndTime, "HH:mm", { timeZone: TIMEZONE }),
+      status: slot.status,
+      price_per_hour: matchedRule ? matchedRule.price_per_hour : 0,
+    };
+  });
+
+return {
+    booked_slots: formattedSlots, 
+    pricing_rules: pricingRules    
+  };};
+
 module.exports = {
   getBookings,
   holdBooking,
@@ -795,4 +874,5 @@ module.exports = {
   cancelBooking,
   createDepositPaymentUrl,
   confirmBookingDeposit,
+  getAvaliadbleTimeSlots,
 };
