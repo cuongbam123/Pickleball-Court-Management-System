@@ -275,7 +275,7 @@ const holdBooking = async (body, user) => {
   }
 
   const total_court_price = Math.round(totalPrice);
-  const deposit_amount = Math.round(total_court_price * 0.5);
+  let deposit_amount = Math.round(total_court_price * 0.5);
   const hold_token = crypto.randomUUID();
   const expires_at = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -286,8 +286,9 @@ const holdBooking = async (body, user) => {
   let finalHoldToken = hold_token;
 
   if (user.role === "admin" || user.role === "staff") {
+    deposit_amount = 0;
     initialPaymentStatus = "deposit_paid";
-    initialDepositPaid = deposit_amount;
+    initialDepositPaid = 0;
     initialStatus = "deposited";
     finalHoldToken = null;
   }
@@ -330,7 +331,6 @@ const holdBooking = async (body, user) => {
         error.errorCode = "ERR_COURT_CONFLICT";
         throw error;
       }
-
       const createdDocs = await Booking.create(
         [
           {
