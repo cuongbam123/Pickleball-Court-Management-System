@@ -62,7 +62,7 @@ const LoginForm = () => {
         case "admin":
         case "staff":
         case "customer":
-          navigate("/home", { replace: true });
+         navigate("/home", { replace: true });
           break;
 
         default:
