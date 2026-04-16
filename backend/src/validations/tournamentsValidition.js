@@ -39,5 +39,55 @@ const createTournamentValidation = {
     }),
   }),
 };
+const getTournamentValidation = {
+  query: Joi.object({
+    // Phân trang
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    // Tìm kiếm theo tên
+    search: Joi.string().trim().allow("", null),
+    // Lọc theo hạng (Rank)
+    required_rank: Joi.string().valid("D", "C", "B", "A").messages({
+      'any.only': 'Hạng yêu cầu không hợp lệ'
+    }),
+    // Lọc theo chi nhánh (Phải là định dạng ObjectId của MongoDB)
+    branch_id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .messages({
+        'string.pattern.base': 'ID chi nhánh không đúng định dạng'
+      }),
+  }).unknown(true), // Cho phép các tham số khác không định nghĩa nhưng sẽ không báo lỗi
+};
 
-module.exports = createTournamentValidation;
+const getTournamentDetailValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/) // Kiểm tra đúng định dạng 24 ký tự Hex của MongoDB
+      .required()
+      .messages({
+        'string.pattern.base': 'ID giải đấu không đúng định dạng hợp lệ',
+        'any.required': 'ID giải đấu là bắt buộc',
+      }),
+  }),
+};
+const updateStatusValidation = Joi.object({
+  status: Joi.string()
+    .trim() // Tự động loại bỏ dấu cách thừa ở 2 đầu (nếu có)
+    .valid(
+      "open_registration", 
+      "closed_registration",
+      "completed", 
+    )
+    .required()
+    .messages({
+      'string.base': 'Trạng thái phải là một chuỗi văn bản.',
+      'any.only': 'Trạng thái không hợp lệ. Chỉ chấp nhận: open_registration, ongoing, completed.',
+      'any.required': 'Trạng thái là bắt buộc.'
+    }),
+});
+module.exports = {
+  createTournamentValidation,
+  getTournamentValidation,
+  getTournamentDetailValidation,
+  updateStatusValidation,
+}
