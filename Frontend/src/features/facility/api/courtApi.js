@@ -12,3 +12,5 @@ export const updateCourt = (id, data) =>
 export const changeCourtStatus = (id, status) =>
   apiClient.patch(`/api/v1/courts/${id}/status`, { status });
 export const deleteCourt = (id) => apiClient.delete(`/api/v1/courts/${id}`);
+export const toggleCourtTagStatus = (id, tagStatus) =>
+  apiClient.patch(`/api/v1/courts/${id}/tagstatus`, { tagStatus });

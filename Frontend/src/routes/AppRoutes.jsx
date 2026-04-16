@@ -7,6 +7,7 @@ import LogoutPage from "../pages/auth/LogoutPage";
 import ProfileForm from "./../features/auth/components/ProfileForm";
 import RoleHomePage from "../pages/Home/RoleHomePage";
 import HomePage from "../pages/Home/HomePage";
+import StaffBookingPage from "../pages/staff/StaffBookingPage";
 
 //admin
 import AdminHome from "../pages/admin/AdminHome";
@@ -23,6 +24,11 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />
+
+        <Route
+          path="/booking"
+          element={<StaffBookingPage />} 
+        />
         <Route
           path="/profile"
           element={
@@ -81,6 +87,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+        {/* <Route path="/test-ui" element={<TestUI />} /> */}
       </Routes>
     </BrowserRouter>
   );
