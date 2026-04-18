@@ -1,4 +1,3 @@
-const Branch = require("../models/branches");
 const tournamentService = require("../services/tournamentsService");
 
 // CREATE(ADMIN)
@@ -26,7 +25,7 @@ const createNewTournament = async (req, res) => {
 const getTournaments = async (req,res)=>{
   try {
     const {tournament ,meta} = await tournamentService.getTournaments(req.body);
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Danh sách giải đấu",
       data: tournament,
@@ -42,7 +41,7 @@ const getTournaments = async (req,res)=>{
 const getTournamentId = async (req,res,next)=>{
   try {
     const tournament = await tournamentService.getTournamentsId(req.params.id);
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       data: tournament,
     })
@@ -57,7 +56,7 @@ const updateTournamentStatus = async (req,res)=>{
     const {id} = req.params;
     const {status}= req.body;
     const updateStatus = await tournamentService.updateTournamentStatus(id, status , req.user);
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
       message: "Cập nhật trạng thái thành công",
       data: updateStatus,

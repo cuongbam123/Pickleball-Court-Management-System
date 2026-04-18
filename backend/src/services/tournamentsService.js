@@ -21,6 +21,17 @@ const createTournament = async (tournamentData, user) => {
   if (!branch_id) {
     throw new Error("Chi nhánh (branch_id) là bắt buộc!");
   }
+
+  const overlappingTournament = await Tournaments.findOne({
+    branch_id,
+    is_deleted: false,
+    start_date: { $lte: end_date },
+    end_date: { $gte: start_date },
+  });
+
+  if (overlappingTournament) {
+    throw new Error("Chi nhánh này đã có giải đấu trong khoảng thời gian này");
+  }
   const tournament = new Tournaments({
     name,
     required_rank,
@@ -37,7 +48,7 @@ const createTournament = async (tournamentData, user) => {
 
   //lưu audit_log
   const Audit = new AuditLog({
-    action: "create",
+    action: "create tournament",
     target_collection: "tournaments",
     target_id: tournament._id,
     user_id: user.userId,
@@ -51,7 +62,7 @@ const createTournament = async (tournamentData, user) => {
 };
 
 //lấy danh sách các giải đấu
-const getTournaments = async (query) => {
+const getTournaments = async (query = {}) => {
   const { status, required_rank, branch_id, page = 1, limit = 10 } = query;
   const filter = { is_deleted: false };
 
@@ -79,7 +90,6 @@ const getTournaments = async (query) => {
     },
   };
 };
-
 // Lấy chi tiết 1 giải đấu
 const getTournamentsId = async (id) => {
   const tournament = await Tournaments.findOne({
@@ -89,7 +99,7 @@ const getTournamentsId = async (id) => {
   if (!tournament) {
     const error = new Error("Không tìm thấy giải đấu này");
     error.statusCode = 404;
-    error.error_code = "ERR_BRANCH_NOT_FOUND";
+    error.error_code = "ERR_TOURNAMENT_NOT_FOUND";
     throw error;
   }
   return tournament;
@@ -97,31 +107,25 @@ const getTournamentsId = async (id) => {
 //Cập nhật Status
 const updateTournamentStatus = async (tournamentId, newStatus, user) => {
   const validStatuses = ["open_registration", "ongoing", "completed"];
-  const terminalStatuses = ["completed"];
-
+  const statusFlow = {
+    open_registration: ["ongoing"],
+    ongoing: ["completed"],
+    completed: [],
+  };
   if (!validStatuses.includes(newStatus)) {
-    throw new error(`Trạng thái '${newStatus}'không hợp lệ`);
+    throw new Error(`Trạng thái '${newStatus}'không hợp lệ`);
   }
   const tournament = await Tournaments.findById(tournamentId);
   if (!tournament) {
-    throw new error("Không tìm thấy giải đấu yêu cầu.");
+    throw new Error("Không tìm thấy giải đấu yêu cầu.");
   }
-  if (terminalStatuses.includes(tournament.status)) {
+  // kiểm tra chuyển trạng thái hợp lệ
+  if (!statusFlow[tournament.status]?.includes(newStatus)) {
     throw new Error(
       `Không thể thay đổi trạng thái khi giải đấu đã ${tournament.status}.`,
     );
   }
-  // Ví dụ: Chỉ có thể chuyển sang 'ongoing' nếu đang ở 'open' hoặc 'closed_registration'
-  if (
-    newStatus === "ongoing" &&
-    !"open_registration".includes(tournament.status)
-  ) {
-    throw new Error("Giải đấu phải hoàn tất đăng ký trước khi bắt đầu.");
-  }
   tournament.status = newStatus;
-  if (newStatus === "ongoing") {
-    tournament.actual_start_date = new Date();
-  }
   await tournament.save();
   //lưu audit_log
   const Audit = new AuditLog({
@@ -129,12 +133,10 @@ const updateTournamentStatus = async (tournamentId, newStatus, user) => {
     target_collection: "tournaments",
     target_id: tournament._id,
     user_id: user.userId,
-    old_value: null,
+    old_value: oldStatus,
     new_value: tournament,
   });
-
   await Audit.save();
-
   return tournament;
 };
 module.exports = {

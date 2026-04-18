@@ -9,7 +9,7 @@ router.get( "/", validate(getTournamentValidation),tournamentController.getTourn
 router.get("/:id", validate(getTournamentDetailValidation),tournamentController.getTournamentId)
 //ADMIN
 router.post(
-    "/create",
+    "/",
     authenticate,
     authorizeRoles("admin"),
     validate(createTournamentValidation),
