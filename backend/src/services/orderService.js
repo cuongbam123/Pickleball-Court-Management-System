@@ -9,10 +9,6 @@ const Order = require("../models/orders");
 const Booking = require("../models/bookings");
 const Product = require("../models/products");
 const AuditLog = require("../models/audit_logs");
-const {
-  toIdString,
-  assertStaffOrManagerBranchAccess,
-} = require("../utils/accessControl");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -20,12 +16,7 @@ const getOrders = async (query, user) => {
   const { branch_id, date, payment_status, page = 1, limit = 20 } = query;
   const filter = { is_deleted: false };
 
-  if (user.role === "staff" || user.role === "manager") {
-    if (branch_id && toIdString(branch_id) !== toIdString(user.branch_id)) {
-      const error = new Error("Ban chi duoc xem hoa don trong chi nhanh cua minh");
-      error.statusCode = 403;
-      throw error;
-    }
+  if (user.role === "staff") {
     filter.branch_id = user.branch_id;
   } else if (user.role === "admin" && branch_id) {
     filter.branch_id = branch_id;
@@ -82,16 +73,12 @@ const getOrderDetail = async (orderId, user) => {
     .populate("booking_id", "start_time end_time status")
     .lean();
 
-  if (!order || order.is_deleted) throw new Error("Hoa don khong ton tai");
+  if (!order || order.is_deleted) throw new Error("Hóa đơn không tồn tại");
 
-  assertStaffOrManagerBranchAccess(
-    user,
-    order.branch_id,
-    "Ban chi duoc xem hoa don trong chi nhanh cua minh",
-  );
-
-  const currentUserId = user.userId || user._id || user.id;
-  if (user.role === "customer" && order.user_id._id.toString() !== currentUserId.toString()) {
+  if (
+    user.role === "customer" &&
+    order.user_id._id.toString() !== user._id.toString()
+  ) {
     throw new Error("Bạn không có quyền xem hóa đơn này");
   }
 
@@ -105,12 +92,6 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
 
   const order = await Order.findById(orderId);
   if (!order || order.is_deleted) throw new Error("Hóa đơn không tồn tại");
-
-  assertStaffOrManagerBranchAccess(
-    user,
-    order.branch_id,
-    "Ban chi duoc thanh toan hoa don trong chi nhanh cua minh",
-  );
 
   const currentUserId = user.userId || user._id || user.id;
   if (user.role === "customer" && order.user_id.toString() !== currentUserId.toString()) {
@@ -127,7 +108,7 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
   const tmnCode = process.env.VNP_TMN_CODE;
   const secretKey = process.env.VNP_HASH_SECRET;
   const vnpUrl = process.env.VNP_URL;
-
+  
   let ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
   if (ipAddr === "::1" || ipAddr === "::ffff:127.0.0.1") ipAddr = "127.0.0.1";
 
@@ -135,7 +116,7 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
   const createDate = formatInTimeZone(now, TIME_ZONE, "yyyyMMddHHmmss");
   const expireDate = formatInTimeZone(addMinutes(now, 10), TIME_ZONE, "yyyyMMddHHmmss");
 
-  const amount = Math.round(order.final_amount_due * 100);
+  const amount = Math.round(order.final_amount_due * 100); 
 
   const txnRef = `O_${order._id.toString()}`;
 
@@ -145,7 +126,7 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
     vnp_TmnCode: tmnCode,
     vnp_Locale: "vn",
     vnp_CurrCode: "VND",
-    vnp_TxnRef: txnRef,
+    vnp_TxnRef: txnRef, 
     vnp_OrderInfo: `Thanh toan tong hoa don ${order._id}`,
     vnp_OrderType: "billpayment",
     vnp_Amount: amount,
@@ -178,12 +159,13 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
     if (!order) throw new Error("01");
 
     if (order.final_amount_due !== vnp_Amount) throw new Error("04");
-
-    if (order.payment_status === "fully_paid") throw new Error("02");
+    
+    if (order.payment_status === "fully_paid") throw new Error("02"); 
 
     order.payment_status = "fully_paid";
     order.payment_method = "vnpay";
     await order.save({ session });
+
 
     const booking = await Booking.findById(order.booking_id).session(session);
     if (booking) {
@@ -222,7 +204,7 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
   }
 };
 
-const checkoutOrder = async (orderId, payment_method, amount_received, currentUser) => {
+const checkoutOrder = async (orderId, payment_method, amount_received) => { // thiếu check role staff
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -230,24 +212,15 @@ const checkoutOrder = async (orderId, payment_method, amount_received, currentUs
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
 
-    assertStaffOrManagerBranchAccess(
-      currentUser,
-      order.branch_id,
-      "Ban chi duoc checkout hoa don trong chi nhanh cua minh",
-    );
-
     if (order.payment_status === "fully_paid") {
       throw new Error("Hóa đơn này đã được thanh toán hoàn tất trước đó");
     }
 
     if (amount_received < order.final_amount_due) {
       throw new Error(
-        `Số tiền nhận (${amount_received}d) không đủ để thanh toán nợ (${order.final_amount_due}d)`,
+        `Số tiền nhận (${amount_received}đ) không đủ để thanh toán nợ (${order.final_amount_due}đ)`,
       );
     }
-
-    const oldStatus = order.payment_status;
-    const oldMethod = order.payment_method;
 
     order.payment_status = "fully_paid";
     order.payment_method = payment_method;
@@ -264,12 +237,12 @@ const checkoutOrder = async (orderId, payment_method, amount_received, currentUs
 
     await AuditLog.create({
       action: "checkout_order",
-      user_id: currentUser.userId,
+      user_id: order.user_id,
       target_collection: "orders",
       target_id: order._id,
       old_value: {
-        payment_status: oldStatus,
-        payment_method: oldMethod,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
       },
       new_value: {
         payment_status: "fully_paid",
@@ -286,23 +259,15 @@ const checkoutOrder = async (orderId, payment_method, amount_received, currentUs
   }
 };
 
-const addPosItemsToOrder = async (orderId, items, currentUser) => {
+const addPosItemsToOrder = async (orderId, items) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
-
-    assertStaffOrManagerBranchAccess(
-      currentUser,
-      order.branch_id,
-      "Bạn chỉ được thêm POS cho hóa đơn trong chi nhánh của mình",
-    );
-
-    if (order.payment_status === "fully_paid") {
+    if (order.payment_status === "fully_paid")
       throw new Error("Hóa đơn đã chốt sổ, không thể thêm đồ POS");
-    }
 
     let additionalPosFee = 0;
     const orderItemsSnapshot = [];
@@ -310,16 +275,10 @@ const addPosItemsToOrder = async (orderId, items, currentUser) => {
     for (const item of items) {
       const product = await Product.findById(item.product_id).session(session);
 
-      if (!product) {
+      if (!product)
         throw new Error(`Sản phẩm với ID ${item.product_id} không tồn tại`);
-      }
-      if (product.stock < item.quantity) {
+      if (product.stock < item.quantity)
         throw new Error(`Sản phẩm ${product.name} không đủ tồn kho`);
-      }
-
-      if (toIdString(product.branch_id) !== toIdString(order.branch_id)) {
-        throw new Error("Không thể thêm sản phẩm khác chi nhánh vào hóa đơn");
-      }
 
       product.stock -= item.quantity;
       await product.save({ session });
@@ -355,36 +314,22 @@ const addPosItemsToOrder = async (orderId, items, currentUser) => {
   }
 };
 
-const updatePosItemQuantity = async (
-  orderId,
-  productId,
-  newQuantity,
-  currentUser,
-) => {
+const updatePosItemQuantity = async (orderId, productId, newQuantity) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
-
-    assertStaffOrManagerBranchAccess(
-      currentUser,
-      order.branch_id,
-      "Bạn chỉ được sửa POS của hóa đơn trong chi nhánh của mình",
-    );
-
-    if (order.payment_status === "fully_paid") {
+    if (order.payment_status === "fully_paid")
       throw new Error("Hóa đơn đã chốt sổ, không thể sửa đổi");
-    }
 
     const itemIndex = order.order_items.findIndex(
       (item) => item.product_id.toString() === productId,
     );
 
-    if (itemIndex === -1) {
-      throw new Error("Sản phẩm này không tồn tại trong hóa đơn");
-    }
+    if (itemIndex === -1)
+      throw new Error("Món hàng này không tồn tại trong hóa đơn");
 
     const currentItem = order.order_items[itemIndex];
     const oldQuantity = currentItem.quantity;
@@ -418,7 +363,10 @@ const updatePosItemQuantity = async (
     order.final_amount_due =
       order.total_court_fee + order.total_pos_fee - order.deposit_paid;
 
-    if (order.final_amount_due === 0 && order.payment_status === "pending_final") {
+    if (
+      order.final_amount_due === 0 &&
+      order.payment_status === "pending_final"
+    ) {
       order.payment_status = "deposit_paid";
     }
 

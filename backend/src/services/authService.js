@@ -14,7 +14,6 @@ const generateAccessToken = (user) => {
     {
       userId: user._id,
       role: user.role,
-      branch_id: user.branch_id || null,
     },
     process.env.JWT_SECRET,
     {

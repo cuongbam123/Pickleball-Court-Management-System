@@ -22,28 +22,26 @@ router.get("/:id", validate(getProductById), productController.getProductById);
 //staff va admin
 router.post(
   "/:id/adjust-stock",
-  authorizeRoles("admin", "manager", "staff"),
+  authorizeRoles("admin", "staff"),
   validate(adjustStock),
   productController.adjustStock,
 );
 //admin
 router.post(
   "/",
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   validate(createProduct),
   productController.createProduct,
 );
-
 router.put(
   "/:id",
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   validate(updateProduct),
   productController.updateProduct,
 );
-
 router.delete(
   "/:id",
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   validate(deleteProduct),
   productController.deleteProduct,
 );

@@ -1,7 +1,6 @@
 const Branch = require("../models/branches");
 const Court = require("../models/court");
 const Booking = require("../models/bookings");
-const { assertManagerBranchAccess } = require("../utils/accessControl");
 
 // GET LIST
 const getBranches = async ({ page, limit, search }) => {
@@ -71,18 +70,13 @@ const getBranchById = async (id) => {
   return branch;
 };
 
-const updateBranch = async (id, payload, currentUser) => {
-  assertManagerBranchAccess(
-    currentUser,
-    id,
-    "Manager chi duoc cap nhat thong tin chi nhanh cua minh",
-  );
-
+//update
+const updateBranch = async (id, payload) => {
   try {
     const updatedBranch = await Branch.findOneAndUpdate(
       { _id: id, is_deleted: false },
       { $set: payload },
-      { new: true, runValidators: true },
+      { new: true, runValidators: true }
     ).lean();
 
     if (!updatedBranch) {
@@ -105,13 +99,10 @@ const updateBranch = async (id, payload, currentUser) => {
   }
 };
 
-const deleteBranch = async (id, currentUser) => {
-  assertManagerBranchAccess(
-    currentUser,
-    id,
-    "Manager chi duoc xoa chi nhanh cua minh",
-  );
-
+//delete
+const deleteBranch = async (id) => {
+//check trước khi xóa
+//xem thu co ton tai k
   const branch = await Branch.findOne({ _id: id, is_deleted: false });
   if (!branch) {
     const error = new Error("Không tìm thấy chi nhánh này.");
@@ -136,8 +127,8 @@ const deleteBranch = async (id, currentUser) => {
   const pendingBookingsCount = await Booking.countDocuments({
     branch_id: id,
     status: { $in: ["holding", "deposited", "playing"] },
-    start_time: { $gte: new Date() },
-    is_deleted: false,
+    start_time: { $gte: new Date() }, 
+    is_deleted: false
   });
 
   if (pendingBookingsCount > 0) {

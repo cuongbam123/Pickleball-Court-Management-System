@@ -63,7 +63,7 @@ const addPosItems = async (req, res, next) => {
     const orderId = req.params.id;
     const items = req.body.items;
 
-    const updatedOrder = await orderService.addPosItemsToOrder(orderId, items, req.user);
+    const updatedOrder = await orderService.addPosItemsToOrder(orderId, items);
 
     res.status(200).json({
       success: true,
@@ -84,7 +84,6 @@ const updatePosItem = async (req, res, next) => {
       orderId,
       product_id,
       quantity,
-      req.user,
     );
 
     res.status(200).json({
@@ -109,12 +108,11 @@ const checkout = async (req, res, next) => {
       orderId,
       payment_method,
       amount_received,
-      req.user,
     );
 
     res.status(200).json({
       success: true,
-      message: "Thanh toan hoa don hoan tat",
+      message: "Thanh toán hóa đơn hoàn tất",
       data: updatedOrder,
     });
   } catch (error) {

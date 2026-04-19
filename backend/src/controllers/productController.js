@@ -2,7 +2,7 @@ const productService = require("../services/productService");
 
 const getProducts = async (req, res, next) => {
   try {
-    const result = await productService.getProducts(req.query, req.user);
+    const result = await productService.getProducts(req.query);
 
     res.status(200).json({
       success: true,
@@ -17,7 +17,7 @@ const getProducts = async (req, res, next) => {
 
 const createProduct = async (req, res, next) => {
   try {
-    const product = await productService.createProduct(req.body, req.user);
+    const product = await productService.createProduct(req.body);
 
     res.status(201).json({
       success: true,
@@ -32,7 +32,7 @@ const createProduct = async (req, res, next) => {
 const getProductById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = await productService.getProductById(id, req.user);
+    const product = await productService.getProductById(id);
 
     res.status(200).json({
       success: true,
@@ -47,7 +47,7 @@ const getProductById = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const product = await productService.updateProduct(id, req.body, req.user);
+    const product = await productService.updateProduct(id, req.body);
     res.status(200).json({ success: true, message: "Cập nhật sản phẩm thành công", data: product });
   } catch (err) {
     next(err);
@@ -59,7 +59,7 @@ const adjustStock = async (req, res, next) => {
     const { id } = req.params;
     const userId = req.user.userId;
 
-    const result = await productService.adjustStock(id, userId, req.body, req.user);
+    const result = await productService.adjustStock(id, userId, req.body);
 
     res.status(200).json({
       success: true,
@@ -74,7 +74,7 @@ const adjustStock = async (req, res, next) => {
 const deleteProduct = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await productService.deleteProduct(id, req.user);
+    await productService.deleteProduct(id);
     res.status(200).json({ success: true, message: "Xóa sản phẩm thành công", data: null });
   } catch (err) {
     next(err);
