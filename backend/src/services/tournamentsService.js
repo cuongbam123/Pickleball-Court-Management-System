@@ -63,12 +63,13 @@ const createTournament = async (tournamentData, user) => {
 
 //lấy danh sách các giải đấu
 const getTournaments = async (query = {}) => {
-  const { status, required_rank, branch_id, page = 1, limit = 10 } = query;
+  const { status, required_rank, branch_id, search, page = 1, limit = 10 } = query;
   const filter = { is_deleted: false };
 
   if (status) filter.status = status;
   if (required_rank) filter.required_rank = required_rank;
   if (branch_id) filter.branch_id = branch_id;
+  if (search) filter.name = { $regex: search, $options: 'i' };
 
   const tournament = await Tournaments.find(filter)
     .select(
@@ -125,6 +126,7 @@ const updateTournamentStatus = async (tournamentId, newStatus, user) => {
       `Không thể thay đổi trạng thái khi giải đấu đã ${tournament.status}.`,
     );
   }
+  const oldStatus = tournament.status;
   tournament.status = newStatus;
   await tournament.save();
   //lưu audit_log

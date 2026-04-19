@@ -8,7 +8,7 @@ const createNewTournament = async (req, res) => {
       success: true,
       message: "Giải đấu đã được tạo thành công",
       data: {
-        __id: tournament._id,
+        _id: tournament._id,
         name: tournament.name,
         status: tournament.status,
         created_at: tournament.createdAt,
@@ -24,7 +24,7 @@ const createNewTournament = async (req, res) => {
 //GET
 const getTournaments = async (req,res)=>{
   try {
-    const {tournament ,meta} = await tournamentService.getTournaments(req.body);
+    const {tournament ,meta} = await tournamentService.getTournaments(req.query);
     return res.status(200).json({
       success: true,
       message: "Danh sách giải đấu",
