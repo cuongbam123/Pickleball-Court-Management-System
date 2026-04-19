@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { getSkillRankFromElo } = require("../utils/userRank");
 
 // ================= MAIN SCHEMA =================
 const userSchema = new mongoose.Schema(
@@ -6,7 +7,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // Tự động tạo Unique Index
+      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -25,7 +26,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "staff", "customer"],
+      enum: ["admin", "manager", "staff", "customer"],
       default: "customer",
     },
     full_name: {
@@ -42,7 +43,15 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "branches",
       default: null,
-      // Logic bắt buộc staff phải có branch_id sẽ được kiểm tra ở Service Layer
+      validate: {
+        validator(value) {
+          if (this.role === "staff" || this.role === "manager") {
+            return !!value;
+          }
+          return true;
+        },
+        message: "role staff/manager bat buoc phai co branch_id",
+      },
     },
     loyalty_points: {
       type: Number,
@@ -62,6 +71,7 @@ const userSchema = new mongoose.Schema(
     elo_score: {
       type: Number,
       default: 1000,
+      min: 0,
     },
     is_deleted: {
       type: Boolean,
@@ -73,6 +83,29 @@ const userSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
+
+userSchema.pre("validate", function autoSkillRankByElo(next) {
+  this.skill_rank = getSkillRankFromElo(this.elo_score);
+  next();
+});
+
+userSchema.pre("findOneAndUpdate", function autoRankWhenUpdatingElo(next) {
+  const update = this.getUpdate() || {};
+  const nextElo =
+    update.elo_score !== undefined ? update.elo_score : update.$set?.elo_score;
+
+  if (nextElo !== undefined) {
+    const derivedRank = getSkillRankFromElo(nextElo);
+    if (update.$set) {
+      update.$set.skill_rank = derivedRank;
+    } else {
+      update.skill_rank = derivedRank;
+    }
+    this.setUpdate(update);
+  }
+
+  next();
+});
 
 // ================= INDEX =================
 
