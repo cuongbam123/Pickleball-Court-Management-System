@@ -596,7 +596,7 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
       }).session(session);
 
       if (!booking) {
-        const error = new Error("Khong tim thay thong tin dat san");
+        const error = new Error("Không tìm thấy thông tin đặt sân");
         error.statusCode = 404;
         throw error;
       }
