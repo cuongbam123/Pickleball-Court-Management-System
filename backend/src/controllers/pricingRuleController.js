@@ -2,7 +2,7 @@ const pricingRuleService = require("../services/pricingRuleService");
 
 const getPricingRules = async (req, res, next) => {
   try {
-    const result = await pricingRuleService.getPricingRules(req.query);
+    const result = await pricingRuleService.getPricingRules(req.query, req.user);
 
     return res.status(200).json({
       success: true,
@@ -17,7 +17,7 @@ const getPricingRules = async (req, res, next) => {
 
 const getPricingRuleDetail = async (req, res, next) => {
   try {
-    const rule = await pricingRuleService.getPricingRuleDetail(req.params.id);
+    const rule = await pricingRuleService.getPricingRuleDetail(req.params.id, req.user);
 
     return res.status(200).json({
       success: true,
@@ -31,7 +31,7 @@ const getPricingRuleDetail = async (req, res, next) => {
 
 const createPricingRule = async (req, res, next) => {
   try {
-    const newRule = await pricingRuleService.createPricingRule(req.body);
+    const newRule = await pricingRuleService.createPricingRule(req.body, req.user);
 
     return res.status(201).json({
       success: true,
@@ -47,7 +47,8 @@ const updatePricingRule = async (req, res, next) => {
   try {
     const updatedRule = await pricingRuleService.updatePricingRule(
       req.params.id,
-      req.body
+      req.body,
+      req.user,
     );
 
     return res.status(200).json({
@@ -62,7 +63,7 @@ const updatePricingRule = async (req, res, next) => {
 
 const deletePricingRule = async (req, res, next) => {
   try {
-    await pricingRuleService.deletePricingRule(req.params.id);
+    await pricingRuleService.deletePricingRule(req.params.id, req.user);
 
     return res.status(200).json({
       success: true,

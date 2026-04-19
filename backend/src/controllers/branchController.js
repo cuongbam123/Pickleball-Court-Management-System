@@ -19,7 +19,7 @@ const getBranches = async (req, res, next) => {
 // CREATE
 const createBranch = async (req, res, next) => {
   try {
-    const branch = await branchService.createBranch(req.body);
+    const branch = await branchService.createBranch(req.body, req.user);
 
     res.status(201).json({
       success: true,
@@ -34,7 +34,7 @@ const createBranch = async (req, res, next) => {
 // GET DETAIL
 const getBranchById = async (req, res, next) => {
   try {
-    const branch = await branchService.getBranchById(req.params.id);
+    const branch = await branchService.getBranchById(req.params.id, req.user);
 
     res.status(200).json({
       success: true,
@@ -49,7 +49,7 @@ const getBranchById = async (req, res, next) => {
 const updateBranch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const branch = await branchService.updateBranch(id, req.body);
+    const branch = await branchService.updateBranch(id, req.body, req.user);
 
     res.status(200).json({
       success: true,
@@ -65,7 +65,7 @@ const updateBranch = async (req, res, next) => {
 const deleteBranch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await branchService.deleteBranch(id);
+    await branchService.deleteBranch(id, req.user);
     res.status(200).json({
       success: true,
       message: "Xóa chi nhánh thành công",

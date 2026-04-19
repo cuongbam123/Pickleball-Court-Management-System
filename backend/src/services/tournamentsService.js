@@ -1,7 +1,7 @@
 const Tournaments = require("../models/tournaments");
 const AuditLog = require("../models/audit_logs");
+const { assertManagerBranchAccess } = require("../utils/accessControl");
 
-//Tạo giải đấu
 const createTournament = async (tournamentData, user) => {
   const {
     name,
@@ -19,8 +19,14 @@ const createTournament = async (tournamentData, user) => {
   }
 
   if (!branch_id) {
-    throw new Error("Chi nhánh (branch_id) là bắt buộc!");
+    throw new Error("branch_id là bắt buộc");
   }
+
+  assertManagerBranchAccess(
+    user,
+    branch_id,
+    "Manager chi duoc tao giai dau trong chi nhanh cua minh",
+  );
 
   const overlappingTournament = await Tournaments.findOne({
     branch_id,
@@ -32,6 +38,7 @@ const createTournament = async (tournamentData, user) => {
   if (overlappingTournament) {
     throw new Error("Chi nhánh này đã có giải đấu trong khoảng thời gian này");
   }
+
   const tournament = new Tournaments({
     name,
     required_rank,
@@ -46,9 +53,8 @@ const createTournament = async (tournamentData, user) => {
 
   await tournament.save();
 
-  //lưu audit_log
-  const Audit = new AuditLog({
-    action: "create tournament",
+  const audit = new AuditLog({
+    action: "create_tournament",
     target_collection: "tournaments",
     target_id: tournament._id,
     user_id: user.userId,
@@ -56,7 +62,7 @@ const createTournament = async (tournamentData, user) => {
     new_value: tournament,
   });
 
-  await Audit.save();
+  await audit.save();
 
   return tournament;
 };
@@ -69,15 +75,15 @@ const getTournaments = async (query = {}) => {
   if (status) filter.status = status;
   if (required_rank) filter.required_rank = required_rank;
   if (branch_id) filter.branch_id = branch_id;
-  if (search) filter.name = { $regex: search, $options: 'i' };
+  if (search) filter.name = { $regex: search, $options: "i" };
 
   const tournament = await Tournaments.find(filter)
     .select(
-      "_id name status branch_id required_rank entry_fee max_participants current_participants ",
-    ) // <--- CHỈ LẤY những field này
+      "_id name status branch_id required_rank entry_fee max_participants current_participants",
+    )
     .skip((Number(page) - 1) * Number(limit))
     .limit(Number(limit))
-    .lean(); // <--- Giúp query nhanh hơn 3-5 lần bằng cách trả về plain object
+    .lean();
 
   const totalItems = await Tournaments.countDocuments(filter);
   const totalPages = Math.ceil(totalItems / limit);
@@ -98,7 +104,7 @@ const getTournamentsId = async (id) => {
     is_deleted: false,
   });
   if (!tournament) {
-    const error = new Error("Không tìm thấy giải đấu này");
+    const error = new Error("Khong tim thay giai dau nay");
     error.statusCode = 404;
     error.error_code = "ERR_TOURNAMENT_NOT_FOUND";
     throw error;
@@ -113,34 +119,45 @@ const updateTournamentStatus = async (tournamentId, newStatus, user) => {
     ongoing: ["completed"],
     completed: [],
   };
+
   if (!validStatuses.includes(newStatus)) {
-    throw new Error(`Trạng thái '${newStatus}'không hợp lệ`);
+    throw new Error(`Trạng thái '${newStatus}' không hợp lệ`);
   }
+
   const tournament = await Tournaments.findById(tournamentId);
   if (!tournament) {
     throw new Error("Không tìm thấy giải đấu yêu cầu.");
   }
-  // kiểm tra chuyển trạng thái hợp lệ
+
+  assertManagerBranchAccess(
+    user,
+    tournament.branch_id,
+    "Manager chi duoc cap nhat giai dau trong chi nhanh cua minh",
+  );
+
   if (!statusFlow[tournament.status]?.includes(newStatus)) {
     throw new Error(
       `Không thể thay đổi trạng thái khi giải đấu đã ${tournament.status}.`,
     );
   }
+
   const oldStatus = tournament.status;
   tournament.status = newStatus;
   await tournament.save();
   //lưu audit_log
-  const Audit = new AuditLog({
-    action: "Update_Status",
+  const audit = new AuditLog({
+    action: "update_tournament_status",
     target_collection: "tournaments",
     target_id: tournament._id,
     user_id: user.userId,
     old_value: oldStatus,
     new_value: tournament,
   });
-  await Audit.save();
+  await audit.save();
+
   return tournament;
 };
+
 module.exports = {
   createTournament,
   getTournaments,

@@ -16,6 +16,7 @@ const Order = require("../models/orders");
 const PricingRule = require("../models/pricing_rules");
 const AuditLog = require("../models/audit_logs");
 const User = require("../models/users");
+const { assertStaffOrManagerBranchAccess, toIdString } = require("../utils/accessControl");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 const getBookings = async (query, user) => {
@@ -28,6 +29,15 @@ const getBookings = async (query, user) => {
     is_deleted: false,
     status: { $ne: "cancelled" },
   };
+
+  if (user && (user.role === "staff" || user.role === "manager")) {
+    if (branch_id && toIdString(branch_id) !== toIdString(user.branch_id)) {
+      const error = new Error("Ban chi duoc xem lich dat trong chi nhanh cua minh");
+      error.statusCode = 403;
+      throw error;
+    }
+    filter.branch_id = user.branch_id;
+  }
 
   if (branch_id) {
     filter.branch_id = branch_id;
@@ -51,7 +61,7 @@ const getBookings = async (query, user) => {
   ]);
 
   const isAdminOrStaff =
-    user && (user.role === "admin" || user.role === "staff");
+    user && (user.role === "admin" || user.role === "staff" || user.role === "manager");
 
   const sanitizedData = bookings.map((booking) => {
     if (!isAdminOrStaff) {
@@ -88,10 +98,19 @@ const getBookingDetail = async (bookingId, user) => {
     throw error;
   }
 
+  if (user && (user.role === "staff" || user.role === "manager")) {
+    assertStaffOrManagerBranchAccess(
+      user,
+      booking.branch_id,
+      "Ban chi duoc xem lich dat trong chi nhanh cua minh",
+    );
+  }
+
   const isAdminOrStaff =
     user &&
     (user.role === "admin" ||
       user.role === "staff" ||
+      user.role === "manager" ||
       booking.user_id._id.toString() === user.userId);
   if (!isAdminOrStaff) {
     const error = new Error("Bạn không có quyền xem chi tiết đặt sân này");
@@ -111,6 +130,12 @@ const holdBooking = async (body, user) => {
     booking_type,
     buffer_time = 10,
   } = body;
+
+  assertStaffOrManagerBranchAccess(
+    user,
+    branch_id,
+    "Ban chi duoc dat san trong chi nhanh cua minh",
+  );
 
   const start = parseISO(start_time);
   const end = parseISO(end_time);
@@ -168,6 +193,7 @@ const holdBooking = async (body, user) => {
   if (
     isBookingForNow &&
     user.role !== "admin" &&
+    user.role !== "manager" &&
     court.tagStatus !== "available"
   ) {
     const error = new Error(
@@ -285,7 +311,7 @@ const holdBooking = async (body, user) => {
   let initialStatus = "holding";
   let finalHoldToken = hold_token;
 
-  if (user.role === "admin" || user.role === "staff") {
+  if (user.role === "admin" || user.role === "manager" || user.role === "staff") {
     initialPaymentStatus = "deposit_paid";
     initialDepositPaid = deposit_amount;
     initialStatus = "deposited";
@@ -570,10 +596,16 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
       }).session(session);
 
       if (!booking) {
-        const error = new Error("Không tìm thấy thông tin đặt sân");
+        const error = new Error("Khong tim thay thong tin dat san");
         error.statusCode = 404;
         throw error;
       }
+
+      assertStaffOrManagerBranchAccess(
+        user,
+        booking.branch_id,
+        "Ban chi duoc cap nhat lich dat trong chi nhanh cua minh",
+      );
 
       const currentStatus = booking.status;
       const now = new Date();
@@ -591,7 +623,7 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
 
         // Kiểm tra thời gian check-in
         const diffMins = (booking.start_time - now) / (1000 * 60);
-        if (diffMins > 30 && user.role !== "admin" && user.role !== "staff") {
+        if (diffMins > 30 && user.role !== "admin" && user.role !== "manager" && user.role !== "staff") {
           const error = new Error(
             "Còn quá sớm để check-in. Vui lòng quay lại trước giờ bắt đầu 30 phút.",
           );
@@ -659,6 +691,12 @@ const cancelBooking = async (bookingId, reason, user) => {
         throw error;
       }
       const now = new Date();
+
+      assertStaffOrManagerBranchAccess(
+        user,
+        booking.branch_id,
+        "Ban chi duoc huy lich trong chi nhanh cua minh",
+      );
       //customer chỉ đc hủy hóa đơn của mình
       if (user.role === "customer") {
         if (booking.user_id.toString() !== user.userId) {
