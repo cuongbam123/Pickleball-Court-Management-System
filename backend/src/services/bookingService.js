@@ -137,6 +137,12 @@ const holdBooking = async (body, user) => {
     "Ban chi duoc dat san trong chi nhanh cua minh",
   );
 
+  assertStaffOrManagerBranchAccess(
+    user,
+    branch_id,
+    "Ban chi duoc dat san trong chi nhanh cua minh",
+  );
+
   const start = parseISO(start_time);
   const end = parseISO(end_time);
   const now = new Date();
@@ -596,7 +602,7 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
       }).session(session);
 
       if (!booking) {
-        const error = new Error("Không tìm thấy thông tin đặt sân");
+        const error = new Error("Khong tim thay thong tin dat san");
         error.statusCode = 404;
         throw error;
       }

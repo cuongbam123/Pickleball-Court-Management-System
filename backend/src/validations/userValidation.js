@@ -1,7 +1,6 @@
 const Joi = require("joi");
 const mongoose = require("mongoose");
 
-//ktra ObjectId hop le
 const objectId = (value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     return helpers.message("Invalid ObjectId");
@@ -9,7 +8,6 @@ const objectId = (value, helpers) => {
   return value;
 };
 
-//lay danh sach user
 const getUsers = {
   query: Joi.object({
     page: Joi.number().min(1).default(1),
@@ -19,14 +17,12 @@ const getUsers = {
   }),
 };
 
-//lay thong tin uúusr 
 const getUserById = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
   }),
 };
 
-//cap nhat thong tin user
 const updateUser = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
@@ -53,7 +49,6 @@ const updateUser = {
   }).min(1),
 };
 
-//update rank
 const updateUserRank = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
@@ -66,13 +61,12 @@ const updateUserRank = {
   }),
 };
 
-//xoa usser nhma van luu db de truy van
 const deleteUser = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
   }),
 };
-//updateMe
+
 const updateMe = {
   body: Joi.object({
     full_name: Joi.string().min(2).max(255),
