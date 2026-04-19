@@ -4,7 +4,7 @@ class UserController {
   //gET /users
   async getUsers(req, res, next) {
     try {
-      const result = await userService.getUsers(req.query);
+      const result = await userService.getUsers(req.query, req.user);
 
       return res.status(200).json({
         success: true,
@@ -20,7 +20,7 @@ class UserController {
   // GET /users/:id
   async getUserById(req, res, next) {
     try {
-      const user = await userService.getUserById(req.params.id);
+      const user = await userService.getUserById(req.params.id, req.user);
 
       return res.status(200).json({
         success: true,
@@ -35,12 +35,7 @@ class UserController {
   // PUT /users/:id
   async updateUser(req, res, next) {
     try {
-      // console.log("Data dc giai ma: ", req.user);
-      const user = await userService.updateUser(
-        req.params.id,
-        req.body,
-        req.user,
-      );
+      const user = await userService.updateUser(req.params.id, req.body, req.user);
 
       return res.status(200).json({
         success: true,
@@ -54,12 +49,12 @@ class UserController {
   // PATCH /users/:id/rank
   async updateUserRank(req, res, next) {
     try {
-      const { skill_rank, elo_score } = req.body;
+      const { elo_score } = req.body;
 
       // Gọi service, truyền vào id cần sửa, giá trị rank mới và thông tin người đang thao tác (req.user)
       const user = await userService.updateUserRank(
         req.params.id,
-        { skill_rank, elo_score },
+        { elo_score },
         req.user,
       );
 
@@ -70,7 +65,7 @@ class UserController {
           _id: user._id,
           full_name: user.full_name,
           skill_rank: user.skill_rank,
-          elo_score: user.elo_score
+          elo_score: user.elo_score,
         },
       });
     } catch (err) {
@@ -95,54 +90,52 @@ class UserController {
   }
   //GET /users/me
   async getMe(req, res, next) {
-  try {
-    const user = await userService.getMe(req.user);
+    try {
+      const user = await userService.getMe(req.user);
 
-    return res.status(200).json({
-      success: true,
-      message: "Lấy thông tin thành công",
-      data: user,
-    });
-  } catch (err) {
-    next(err);
-  }
+      return res.status(200).json({
+        success: true,
+        message: "Lấy thông tin thành công",
+        data: user,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
   //PUT /users/me
   async updateMe(req, res, next) {
-  try {
-    const result = await userService.updateMe(req.user, req.body);
-    //changePass
-    if (result?.type === "change_password") {
+    try {
+      const result = await userService.updateMe(req.user, req.body);
+
+      if (result?.type === "change_password") {
+        return res.status(200).json({
+          success: true,
+          message: "Đổi mật khẩu thành công",
+        });
+      }
+
       return res.status(200).json({
         success: true,
-        message: "Đổi mật khẩu thành công",
+        message: "Cập nhật thông tin thành công",
+        data: result,
       });
+    } catch (err) {
+      next(err);
     }
-    // update
-    return res.status(200).json({
-      success: true,
-      message: "Cập nhật thông tin thành công",
-      data: result,
-    });
-  } catch (err) {
-    next(err);
-  }
   }
 
   async getDashboardStats(req, res, next) {
-  try {
-    // Gọi layer Service để lấy data
-    const statsData = await userService.getDashboardStats();
+    try {
+      const statsData = await userService.getDashboardStats(req.user);
 
-    // Trả về JSON theo đúng chuẩn format yêu cầu
-    res.status(200).json({
-      success: true,
-      data: statsData,
-    });
-  } catch (err) {
-    // Pass lỗi sang Error Handling Middleware tổng của Express
-    next(err);
+      res.status(200).json({
+        success: true,
+        data: statsData,
+      });
+    } catch (err) {
+      next(err);
+    }
   }
-};
 }
+
 module.exports = new UserController();

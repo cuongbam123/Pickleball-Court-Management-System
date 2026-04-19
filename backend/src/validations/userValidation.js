@@ -1,7 +1,6 @@
 const Joi = require("joi");
 const mongoose = require("mongoose");
 
-//ktra ObjectId hop le
 const objectId = (value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
     return helpers.message("Invalid ObjectId");
@@ -9,24 +8,21 @@ const objectId = (value, helpers) => {
   return value;
 };
 
-//lay danh sach user
 const getUsers = {
   query: Joi.object({
     page: Joi.number().min(1).default(1),
     limit: Joi.number().min(1).max(100).default(20),
-    role: Joi.string().valid("admin", "staff", "customer"),
+    role: Joi.string().valid("admin", "manager", "staff", "customer"),
     search: Joi.string().allow(""),
   }),
 };
 
-//lay thong tin uúusr 
 const getUserById = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
   }),
 };
 
-//cap nhat thong tin user
 const updateUser = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
@@ -34,34 +30,43 @@ const updateUser = {
   body: Joi.object({
     full_name: Joi.string().min(2).max(255),
     email: Joi.string().email(),
-    role: Joi.string().valid("admin", "staff", "customer"),
+    role: Joi.string().valid("admin", "manager", "staff", "customer"),
     phone: Joi.string().pattern(/^[0-9]{9,11}$/),
     branch_id: Joi.when("role", {
-      is: "staff",
-      then: Joi.string().custom(objectId).required(),
-      otherwise: Joi.allow(null),
+      switch: [
+        {
+          is: "staff",
+          then: Joi.string().custom(objectId).required(),
+        },
+        {
+          is: "manager",
+          then: Joi.string().custom(objectId).required(),
+        },
+      ],
+      otherwise: Joi.string().custom(objectId).allow(null),
     }),
-  }),
+    elo_score: Joi.number().min(0),
+  }).min(1),
 };
 
-//update rank
 const updateUserRank = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object({
-    skill_rank: Joi.string().valid("D", "C", "B", "A").required(),
     elo_score: Joi.number().min(0).required(),
+    skill_rank: Joi.forbidden().messages({
+      "any.unknown": "skill_rank se duoc he thong tu dong tinh theo elo_score",
+    }),
   }),
 };
 
-//xoa usser nhma van luu db de truy van
 const deleteUser = {
   params: Joi.object({
     id: Joi.string().custom(objectId).required(),
   }),
 };
-//updateMe
+
 const updateMe = {
   body: Joi.object({
     full_name: Joi.string().min(2).max(255),
@@ -69,24 +74,20 @@ const updateMe = {
 
     old_password: Joi.string(),
 
-    new_password: Joi.string()
-      .min(6)
-      .invalid(Joi.ref("old_password")) 
-      .messages({
-        "any.invalid": "Mật khẩu mới không được trùng với mật khẩu cũ",
-      }),
+    new_password: Joi.string().min(6).invalid(Joi.ref("old_password")).messages({
+      "any.invalid": "Mat khau moi khong duoc trung voi mat khau cu",
+    }),
 
-    confirm_new_password: Joi.string()
-      .valid(Joi.ref("new_password"))
-      .messages({
-        "any.only": "Xác nhận mật khẩu mới không khớp",
-      }),
+    confirm_new_password: Joi.string().valid(Joi.ref("new_password")).messages({
+      "any.only": "Xac nhan mat khau moi khong khop",
+    }),
   })
-    .or("full_name", "phone", "old_password") 
+    .or("full_name", "phone", "old_password")
     .with("old_password", "new_password")
     .with("new_password", "old_password")
     .with("new_password", "confirm_new_password"),
 };
+
 module.exports = {
   getUsers,
   getUserById,

@@ -20,7 +20,7 @@ router.get("/:id", validate(getCourtById), courtController.getCourtById);
 router.put(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(updateCourt),
   courtController.updateCourt,
 );
@@ -29,7 +29,7 @@ router.put(
 router.patch(
   "/:id/status",
   authenticate,
-  authorizeRoles("admin", "staff"),
+  authorizeRoles("admin", "manager", "staff"),
   validate(updateCourtStatus),
   courtController.updateCourtStatus,
 );
@@ -37,7 +37,7 @@ router.patch(
 router.patch(
   "/:id/tag-status",
   authenticate,
-  authorizeRoles("admin", "staff"),
+  authorizeRoles("admin", "manager", "staff"),
   validate(updateCourtTagStatus),
   courtController.updateCourtTagStatus,
 );
@@ -45,8 +45,9 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(deleteCourt),
   courtController.deleteCourt,
 );
+
 module.exports = router;

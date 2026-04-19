@@ -9,47 +9,43 @@ const {
   updatePricingRuleBodySchema,
 } = require("../validations/pricingRuleValidation");
 
-const {
-  validate,
-  authenticate,
-  authorizeRoles,
-} = require("../middlewares");
+const { validate, authenticate, authorizeRoles } = require("../middlewares");
 
 router.get(
   "/",
   validate(getPricingRulesQuerySchema, "query"),
-  pricingRuleController.getPricingRules
+  pricingRuleController.getPricingRules,
 );
 
 router.get(
   "/:id",
   validate(pricingRuleIdParamSchema, "params"),
-  pricingRuleController.getPricingRuleDetail
+  pricingRuleController.getPricingRuleDetail,
 );
 
 router.post(
   "/",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(createPricingRuleBodySchema, "body"),
-  pricingRuleController.createPricingRule
+  pricingRuleController.createPricingRule,
 );
 
 router.put(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(pricingRuleIdParamSchema, "params"),
   validate(updatePricingRuleBodySchema, "body"),
-  pricingRuleController.updatePricingRule
+  pricingRuleController.updatePricingRule,
 );
 
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(pricingRuleIdParamSchema, "params"),
-  pricingRuleController.deletePricingRule
+  pricingRuleController.deletePricingRule,
 );
 
 module.exports = router;
