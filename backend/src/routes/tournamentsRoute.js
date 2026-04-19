@@ -1,31 +1,26 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 const tournamentController = require("../controllers/tournamentsController");
 const { validate, authenticate, authorizeRoles } = require("../middlewares");
-const {
-  createTournamentValidation,
-  getTournamentValidation,
-  getTournamentDetailValidation,
-  updateStatusValidation,
-} = require("../validations/tournamentsValidition");
+const {createTournamentValidation,getTournamentValidation,getTournamentDetailValidation , updateStatusValidation}  = require("../validations/tournamentsValidition")
 
-router.get("/", validate(getTournamentValidation), tournamentController.getTournaments);
-router.get("/:id", validate(getTournamentDetailValidation), tournamentController.getTournamentId);
-
+//PUBLIC
+router.get( "/", validate(getTournamentValidation),tournamentController.getTournaments);
+router.get("/:id", validate(getTournamentDetailValidation),tournamentController.getTournamentId)
+//ADMIN
 router.post(
-  "/",
-  authenticate,
-  authorizeRoles("admin", "manager"),
-  validate(createTournamentValidation),
-  tournamentController.createNewTournament,
+    "/",
+    authenticate,
+    authorizeRoles("admin"),
+    validate(createTournamentValidation),
+    tournamentController.createNewTournament
 );
-
 router.patch(
-  "/:id/status",
-  authenticate,
-  authorizeRoles("admin", "manager"),
-  validate(updateStatusValidation),
-  tournamentController.updateTournamentStatus,
+    "/:id/status",
+    authenticate,
+    authorizeRoles("admin"),
+    validate(updateStatusValidation),
+    tournamentController.updateTournamentStatus
 );
 
 module.exports = router;

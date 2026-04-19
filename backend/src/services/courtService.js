@@ -1,35 +1,38 @@
 const Court = require("../models/court");
 const Branch = require("../models/branches");
 const Booking = require("../models/bookings");
-const {
-  isAdmin,
-  assertManagerBranchAccess,
-  assertStaffOrManagerBranchAccess,
-} = require("../utils/accessControl");
 
+//Get all
+// court.service.js (hoặc file chứa hàm getCourtsByBranch hiện tại của bạn)
+
+// GET ALL COURTS (Có hỗ trợ lọc tùy chọn)
 const getAllCourts = async (
   { page = 1, limit = 10, type, status, tagStatus, branch_id },
-  currentUser,
+  userRole
 ) => {
+  const isAdmin = userRole === "admin";
+
+  // Build query linh hoạt
   const query = {
-    ...(branch_id && { branch_id }),
+    ...(branch_id && { branch_id }), // Nếu có truyền branch_id lên thì lọc, không thì lấy hết
     ...(type && { type }),
     ...(status && { status }),
     ...(tagStatus && { tagStatus }),
   };
 
-  if (!isAdmin(currentUser)) {
+  // Check quyền: Admin thấy cả sân đã xóa (soft delete), role khác thì không
+  if (!isAdmin) {
     query.is_deleted = false;
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
     Court.find(query)
-      .populate("branch_id", "name address")
+      .populate("branch_id", "name address") // 👉 Lấy luôn tên và địa chỉ chi nhánh
       .sort({ is_deleted: 1, createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limit)
       .select("-createdAt -updatedAt")
       .lean(),
     Court.countDocuments(query),
@@ -41,16 +44,18 @@ const getAllCourts = async (
       page: Number(page),
       limit: Number(limit),
       total_records: total,
-      total_pages: Math.ceil(total / Number(limit)) || 1,
+      total_pages: Math.ceil(total / limit) || 1,
     },
   };
 };
-
+// GET COURTS BY BRANCH
 const getCourtsByBranch = async (
   branchId,
-  { page = 1, limit = 10, type, status, tagStatus },
-  currentUser,
+  { page, limit, type, status, tagStatus },
+  userRole,
 ) => {
+  const isAdmin = userRole === "admin";
+
   const query = {
     branch_id: branchId,
     ...(type && { type }),
@@ -62,13 +67,13 @@ const getCourtsByBranch = async (
     query.is_deleted = false;
   }
 
-  const skip = (Number(page) - 1) * Number(limit);
+  const skip = (page - 1) * limit;
 
   const [data, total] = await Promise.all([
     Court.find(query)
       .sort({ is_deleted: 1, createdAt: -1 })
       .skip(skip)
-      .limit(Number(limit))
+      .limit(limit)
       .select("-createdAt -updatedAt")
       .lean(),
     Court.countDocuments(query),
@@ -77,26 +82,19 @@ const getCourtsByBranch = async (
   return {
     data,
     meta: {
-      page: Number(page),
-      limit: Number(limit),
+      page,
+      limit,
       total_records: total,
-      total_pages: Math.ceil(total / Number(limit)) || 1,
+      total_pages: Math.ceil(total / limit) || 1,
     },
   };
 };
 
-const createCourt = async (branchId, payload, currentUser) => {
-  assertManagerBranchAccess(
-    currentUser,
-    branchId,
-    "Manager chi duoc tao san cho chi nhanh cua minh",
-  );
-
+const createCourt = async (branchId, payload) => {
   const branchExists = await Branch.exists({
     _id: branchId,
     is_deleted: false,
   });
-
   if (!branchExists) {
     const error = new Error("Chi nhánh không tồn tại hoặc đã bị xóa.");
     error.statusCode = 404;
@@ -139,28 +137,7 @@ const getCourtById = async (id) => {
   return court;
 };
 
-const findCourtAndAssertScope = async (id, currentUser, message) => {
-  const court = await Court.findOne({ _id: id, is_deleted: false }).lean();
-
-  if (!court) {
-    const error = new Error("Khong tìm thay san nay hoac da bi xoa.");
-    error.statusCode = 404;
-    error.error_code = "ERR_COURT_NOT_FOUND";
-    throw error;
-  }
-
-  assertManagerBranchAccess(currentUser, court.branch_id, message);
-
-  return court;
-};
-
-const updateCourt = async (id, payload, currentUser) => {
-  await findCourtAndAssertScope(
-    id,
-    currentUser,
-    "Manager chi duoc cap nhat san trong chi nhanh cua minh",
-  );
-
+const updateCourt = async (id, payload) => {
   try {
     const court = await Court.findOneAndUpdate(
       { _id: id, is_deleted: false },
@@ -187,68 +164,46 @@ const updateCourt = async (id, payload, currentUser) => {
 };
 
 //chi doi trang thai san
-const updateCourtStatus = async (id, status, currentUser) => {
-  const court = await findCourtAndAssertScope(
-    id,
-    currentUser,
-    "Manager chi duoc cap nhat san trong chi nhanh cua minh",
-  );
-
-  assertStaffOrManagerBranchAccess(
-    currentUser,
-    court.branch_id,
-    "Ban chi duoc cap nhat trang thai san trong chi nhanh cua minh",
-  );
-
-  const updatedCourt = await Court.findOneAndUpdate(
+const updateCourtStatus = async (id, status) => {
+  const court = await Court.findOneAndUpdate(
     { _id: id, is_deleted: false },
     { $set: { status } },
     { new: true },
   ).lean();
 
-  if (!updatedCourt) {
+  if (!court) {
     const error = new Error("Không tìm thấy sân này.");
     error.statusCode = 404;
     error.error_code = "ERR_COURT_NOT_FOUND";
     throw error;
   }
-  return updatedCourt;
+  return court;
 };
 
-const updateCourtTagStatus = async (id, tagStatus, currentUser) => {
-  const court = await findCourtAndAssertScope(
-    id,
-    currentUser,
-    "Manager chi duoc cap nhat san trong chi nhanh cua minh",
-  );
-
-  assertStaffOrManagerBranchAccess(
-    currentUser,
-    court.branch_id,
-    "Ban chi duoc cap nhat trang thai san trong chi nhanh cua minh",
-  );
-
-  const updatedCourt = await Court.findOneAndUpdate(
+const updateCourtTagStatus = async (id, tagStatus) => {
+  const court = await Court.findOneAndUpdate(
     { _id: id, is_deleted: false },
     { $set: { tagStatus } },
     { new: true },
   ).lean();
-
-  if (!updatedCourt) {
+  
+  if (!court) {
     const error = new Error("Không tìm thấy sân này.");
     error.statusCode = 404;
     error.error_code = "ERR_COURT_NOT_FOUND";
     throw error;
   }
-  return updatedCourt;
+  return court;
 };
 
-const deleteCourt = async (id, currentUser) => {
-  const court = await findCourtAndAssertScope(
-    id,
-    currentUser,
-    "Manager chi duoc xoa san trong chi nhanh cua minh",
-  );
+const deleteCourt = async (id) => {
+  const court = await Court.findOne({ _id: id, is_deleted: false });
+  if (!court) {
+    const error = new Error("Không tìm thấy sân này.");
+    error.statusCode = 404;
+    error.error_code = "ERR_COURT_NOT_FOUND";
+    throw error;
+  }
 
   const pendingBookingsCount = await Booking.countDocuments({
     court_id: id,
@@ -266,7 +221,8 @@ const deleteCourt = async (id, currentUser) => {
     throw error;
   }
 
-  await Court.updateOne({ _id: court._id }, { is_deleted: true });
+  court.is_deleted = true;
+  await court.save();
   return true;
 };
 

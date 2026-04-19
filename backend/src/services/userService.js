@@ -3,13 +3,6 @@ const AuditLog = require("../models/audit_logs");
 const Branch = require("../models/branches");
 const Court = require("../models/court");
 const bcrypt = require("bcrypt");
-const {
-  isManager,
-  toIdString,
-  assertHasBranchScope,
-  assertManagerBranchAccess,
-} = require("../utils/accessControl");
-
 class UserService {
   //lấy danh sách user
   async getUsers(query) {
@@ -26,29 +19,20 @@ class UserService {
       ];
     }
 
-    if (isManager(currentUser)) {
-      assertHasBranchScope(currentUser);
-      filter.branch_id = currentUser.branch_id;
-    }
-
-    const skip = (Number(page) - 1) * Number(limit);
+    const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
-      User.find(filter)
-        .select("-password")
-        .skip(skip)
-        .limit(Number(limit))
-        .lean(),
+      User.find(filter).select("-password").skip(skip).limit(limit).lean(),
       User.countDocuments(filter),
     ]);
 
     return {
       users,
       meta: {
-        page: Number(page),
-        limit: Number(limit),
+        page,
+        limit,
         total_records: total,
-        total_pages: Math.ceil(total / Number(limit)),
+        total_pages: Math.ceil(total / limit),
       },
     };
   }
@@ -59,13 +43,7 @@ class UserService {
       is_deleted: false,
     }).select("-password");
 
-    if (!user) throw new Error("Khong tim thay nguoi dung hoac tai khoan da bi khoa");
-
-    assertManagerBranchAccess(
-      currentUser,
-      user.branch_id,
-      "Manager chi duoc xem nguoi dung trong chi nhanh cua minh",
-    );
+    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
 
     return user;
   }
@@ -79,22 +57,10 @@ class UserService {
 
     if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
 
-    assertManagerBranchAccess(
-      currentUser,
-      user.branch_id,
-      "Manager chi duoc cap nhat nguoi dung trong chi nhanh cua minh",
-    );
-
-    if (isManager(currentUser) && payload.role === "admin") {
-      const error = new Error("Manager khong duoc gan role admin");
-      error.statusCode = 403;
-      throw error;
-    }
-
     if (
       currentUser.userId.toString() === id &&
       payload.role &&
-      payload.role !== user.role
+      payload.role !== "admin"
     ) {
       throw new Error("Bạn không thể tự hạ quyền của chính mình");
     }
@@ -111,30 +77,12 @@ class UserService {
       }
     }
 
-    const nextRole = payload.role || user.role;
-    const nextBranchId =
-      payload.branch_id !== undefined ? payload.branch_id : user.branch_id;
-
-    if ((nextRole === "staff" || nextRole === "manager") && !nextBranchId) {
-      throw new Error("Role staff/manager bat buoc phai co branch_id");
+    //staff phải có branch_id
+    if (payload.role === "staff" && !payload.branch_id) {
+      throw new Error("Staff phải có branch_id");
     }
 
-    if (nextRole === "admin") {
-      payload.branch_id = null;
-    }
-
-    if (isManager(currentUser)) {
-      const managerBranchId = toIdString(currentUser.branch_id);
-      if (
-        payload.branch_id !== undefined &&
-        toIdString(payload.branch_id) !== managerBranchId
-      ) {
-        const error = new Error("Manager chi duoc gan branch_id cua chi nhanh minh");
-        error.statusCode = 403;
-        throw error;
-      }
-    }
-
+    //luu log trước khi update
     const oldValue = user.toObject();
     //update
     Object.assign(user, payload);
@@ -166,16 +114,11 @@ class UserService {
       throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
     }
 
-    assertManagerBranchAccess(
-      currentUser,
-      user.branch_id,
-      "Manager chi duoc cap nhat rank trong chi nhanh cua minh",
-    );
-
-       //luu log trước khi update
+    //luu log trước khi update
     const oldValue = user.toObject();
-    //up rank và elo lưu vào db
 
+    //up rank và elo lưu vào db
+    user.skill_rank = payload.skill_rank;
     user.elo_score = payload.elo_score;
     await user.save();
 
@@ -202,24 +145,12 @@ class UserService {
       is_deleted: false,
     });
 
-    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị xóa trước đó");
-
+    if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị xóa từ trước");
     if (currentUser.userId.toString() === id) {
       throw new Error("Bạn không thể tự xóa tài khoản của chính mình");
     }
 
-    assertManagerBranchAccess(
-      currentUser,
-      user.branch_id,
-      "Manager chi duoc khoa tai khoan trong chi nhanh cua minh",
-    );
-
-    if (isManager(currentUser) && user.role === "admin") {
-      const error = new Error("Manager khong duoc xoa tai khoan admin");
-      error.statusCode = 403;
-      throw error;
-    }
-
+    //luu log trước khi xóa
     const oldValue = user.toObject();
     //xoa mem
     user.is_deleted = true;
@@ -230,146 +161,128 @@ class UserService {
     //luu log
     await AuditLog.create({
       action: "delete_user",
-      user_id: currentUser.userId,
+      user_id: currentUser.userId, //luu nguoi xoa
       target_collection: "users",
       target_id: user._id,
       old_value: oldValue,
-      new_value: newValue,
+      new_value: newValue, //doi trang thai da xoa is_deleted = true
     });
 
     return true;
   }
 // get me
   async getMe(currentUser) {
-    const user = await User.findOne({
-      _id: currentUser.userId,
-      is_deleted: false,
-    }).select("-password");
+  const user = await User.findOne({
+    _id: currentUser.userId,
+    is_deleted: false,
+  }).select("-password");
 
-    if (!user) {
-      throw new Error("Khong tim thay nguoi dung hoac tai khoan da bi khoa");
-    }
+  if (!user) {
+    throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
+  }
+  //log thiếu phone
+   return {
+    _id: user._id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    phone: user.phone,
+    branch_id: user.branch_id,
+    credit: user.credit,
+    loyalty_points: user.loyalty_points,
+    loyalty_tier: user.loyalty_tier,
+    skill_rank: user.skill_rank,
+    elo_score: user.elo_score,
+    createdAt: user.createdAt,
+  };
+}
+  //updateMe
+  async updateMe(currentUser, payload) {
+  const user = await User.findOne({
+    _id: currentUser.userId,
+    is_deleted: false,
+  });
 
-    return {
-      _id: user._id,
-      email: user.email,
-      full_name: user.full_name,
-      role: user.role,
-      phone: user.phone,
-      branch_id: user.branch_id,
-      credit: user.credit,
-      loyalty_points: user.loyalty_points,
-      loyalty_tier: user.loyalty_tier,
-      skill_rank: user.skill_rank,
-      elo_score: user.elo_score,
-      createdAt: user.createdAt,
-    };
+  if (!user) {
+    const error = new Error("Không tìm thấy người dùng");
+    error.status = 404;
+    throw error;
   }
 
-  async updateMe(currentUser, payload) {
-    const user = await User.findOne({
-      _id: currentUser.userId,
-      is_deleted: false,
-    });
+  const oldValue = user.toObject();
+  delete oldValue.password;
 
-    if (!user) {
-      const error = new Error("Khong tim thay nguoi dung");
-      error.status = 404;
+  let isPasswordChanged = false;
+  let isProfileChanged = false;
+//changePass
+if (payload.old_password && payload.new_password) {
+    const isMatch = await bcrypt.compare(
+      payload.old_password,
+      user.password
+    );
+
+    if (!isMatch) {
+      const error = new Error("Mật khẩu cũ không đúng");
+      error.status = 400;
       throw error;
     }
 
-    const oldValue = user.toObject();
-    delete oldValue.password;
+    const hashed = await bcrypt.hash(payload.new_password, 10);
+    user.password = hashed;
+    isPasswordChanged = true;
+  }
+  // update Profile (thiếu phone)
+  const allowedFields = ["full_name", "phone"];
 
-    let isPasswordChanged = false;
-    let isProfileChanged = false;
-
-    if (payload.old_password && payload.new_password) {
-      const isMatch = await bcrypt.compare(payload.old_password, user.password);
-
-      if (!isMatch) {
-        const error = new Error("Mat khau cu khong dung");
-        error.status = 400;
-        throw error;
-      }
-
-      const hashed = await bcrypt.hash(payload.new_password, 10);
-      user.password = hashed;
-      isPasswordChanged = true;
+  allowedFields.forEach((field) => {
+    if (payload[field] !== undefined) {
+      user[field] = payload[field];
+      isProfileChanged = true;
     }
-
-    const allowedFields = ["full_name", "phone"];
-
-    allowedFields.forEach((field) => {
-      if (payload[field] !== undefined) {
-        user[field] = payload[field];
-        isProfileChanged = true;
-      }
-    });
+  });
 
     if (isPasswordChanged || isProfileChanged) {
-      await user.save();
+    await user.save();
     }
+    
+  const newValue = user.toObject();
+  delete newValue.password;
+  delete newValue.role;
 
-    const newValue = user.toObject();
-    delete newValue.password;
-    delete newValue.role;
-
-    if (isPasswordChanged) {
-      await AuditLog.create({
-        action: "update_profile",
-        user_id: currentUser.userId,
-        target_collection: "users",
-        target_id: user._id,
-        old_value: { password: "******" },
-        new_value: { password: "******" },
-      });
-    }
-
-    if (isProfileChanged) {
-      await AuditLog.create({
-        action: "update_profile",
-        user_id: currentUser.userId,
-        target_collection: "users",
-        target_id: user._id,
-        old_value: oldValue,
-        new_value: newValue,
-      });
-    }
-
-    if (isPasswordChanged && !isProfileChanged) {
-      return { message: "Doi mat khau thanh cong" };
-    }
-
-    return newValue;
+  if (isPasswordChanged){
+  await AuditLog.create({
+    action: "update_profile",
+    user_id: currentUser.userId,
+    target_collection: "users",
+    target_id: user._id,
+    old_value: { password: "******" },
+    new_value: { password: "******" },
+  });
   }
+  if(isProfileChanged){
+    await AuditLog.create({
+      action: "update_profile",
+      user_id: currentUser.userId,
+      target_collection: "users",
+      target_id: user._id,
+      old_value: oldValue,
+      new_value: newValue,
+    })
+  }
+if (isPasswordChanged && !isProfileChanged) {
+    return { message: "Đổi mật khẩu thành công" };
+  }
+return newValue;
+}
 
-  async getDashboardStats(currentUser) {
-    const isManagerRole = isManager(currentUser);
-
-    if (isManagerRole) {
-      assertHasBranchScope(currentUser);
-    }
-
-    const branchScope = isManagerRole
-      ? { _id: currentUser.branch_id, is_deleted: false }
-      : { is_deleted: false };
-
-    const courtScope = isManagerRole
-      ? { status: "active", is_deleted: false, branch_id: currentUser.branch_id }
-      : { status: "active", is_deleted: false };
-
-    const staffScope = isManagerRole
-      ? { role: "staff", is_deleted: false, branch_id: currentUser.branch_id }
-      : { role: "staff", is_deleted: false };
-
-    const [totalBranches, activeCourts, totalStaff, monthlyRevenue] =
-      await Promise.all([
-        Branch.countDocuments(branchScope),
-        Court.countDocuments(courtScope),
-        User.countDocuments(staffScope),
-        Promise.resolve(0),
-      ]);
+//dáata cho dashboard admin
+async getDashboardStats() {
+    const [totalBranches, activeCourts, totalStaff, monthlyRevenue] = await Promise.all([
+      Branch.countDocuments({ is_deleted: false }),
+      Court.countDocuments({ status: "active", is_deleted: false }),
+      User.countDocuments({ role: "staff", is_deleted: false }),
+      Promise.resolve(0) // Chờ module Order để xử lý sau
+    ]);
 
     return {
       totalBranches,
@@ -379,5 +292,7 @@ class UserService {
     };
   }
 }
+
+
 
 module.exports = new UserService();

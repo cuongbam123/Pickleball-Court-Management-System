@@ -1,10 +1,5 @@
 const PricingRule = require("../models/pricing_rules");
 const mongoose = require("mongoose");
-const {
-  toIdString,
-  assertManagerBranchAccess,
-  assertStaffOrManagerBranchAccess,
-} = require("../utils/accessControl");
 
 const toMinutes = (time) => {
   const [hour, minute] = time.split(":").map(Number);
@@ -15,14 +10,7 @@ const isTimeOverlapped = (newStart, newEnd, existingStart, existingEnd) => {
   return newStart < existingEnd && newEnd > existingStart;
 };
 
-const createAppError = (message, statusCode, errorCode) => {
-  const error = new Error(message);
-  error.statusCode = statusCode;
-  error.error_code = errorCode;
-  return error;
-};
-
-const getPricingRules = async (query, currentUser) => {
+const getPricingRules = async (query) => {
   const {
     branch_id,
     court_type,
@@ -39,24 +27,21 @@ const getPricingRules = async (query, currentUser) => {
   const filter = {
     is_deleted: false,
   };
-
-  if (currentUser?.role === "staff" || currentUser?.role === "manager") {
-    if (branch_id && toIdString(branch_id) !== toIdString(currentUser.branch_id)) {
-      throw createAppError(
-        "Ban chi duoc xem bang gia trong chi nhanh cua minh",
-        403,
-        "ERR_BRANCH_SCOPE_FORBIDDEN",
-      );
-    }
-    filter.branch_id = currentUser.branch_id;
-  } else if (branch_id) {
+  if (branch_id) {
     filter.branch_id = branch_id;
   }
+  if (court_type) {
+    filter.court_type = court_type;
+  }
 
-  if (court_type) filter.court_type = court_type;
-  if (day_type) filter.day_type = day_type;
-  if (time_type) filter.time_type = time_type;
+  if (day_type) {
+    filter.day_type = day_type;
+  }
 
+  if (time_type) {
+    filter.time_type = time_type;
+  }
+  // tổng bản ghi 
   const total_records = await PricingRule.countDocuments(filter);
 
   const data = await PricingRule.find(filter)
@@ -77,7 +62,7 @@ const getPricingRules = async (query, currentUser) => {
   };
 };
 
-const getPricingRuleDetail = async (id, currentUser) => {
+const getPricingRuleDetail = async (id) => {
   const rule = await PricingRule.findOne({
     _id: id,
     is_deleted: false,
@@ -87,16 +72,10 @@ const getPricingRuleDetail = async (id, currentUser) => {
     throw createAppError("Không tìm thấy cấu hình giá", 404, "ERR_PRICING_RULE_NOT_FOUND");
   }
 
-  assertStaffOrManagerBranchAccess(
-    currentUser,
-    rule.branch_id,
-    "Ban chi duoc xem bang gia trong chi nhanh cua minh",
-  );
-
   return rule;
 };
 
-const createPricingRule = async (payload, currentUser) => {
+const createPricingRule = async (payload) => {
   const {
     branch_id,
     court_type,
@@ -106,19 +85,9 @@ const createPricingRule = async (payload, currentUser) => {
     end_time,
     price_per_hour,
   } = payload;
-
-  assertManagerBranchAccess(
-    currentUser,
-    branch_id,
-    "Manager chi duoc tao bang gia trong chi nhanh cua minh",
-  );
-
+// time mới
   const newStart = toMinutes(start_time);
   const newEnd = toMinutes(end_time);
-
-  if (newStart >= newEnd) {
-    throw createAppError("start_time phai nho hon end_time", 400, "ERR_INVALID_TIME_RANGE");
-  }
 
   const existingRules = await PricingRule.find({
     branch_id,
@@ -161,15 +130,9 @@ const updatePricingRule = async (id, payload) => {
   });
 
   if (!currentRule) {
-    throw createAppError("Khong tim thay cau hinh gia", 404, "ERR_PRICING_RULE_NOT_FOUND");
+    throw createAppError("Không tìm thấy cấu hình giá", 404, "ERR_PRICING_RULE_NOT_FOUND");
   }
-
-  assertManagerBranchAccess(
-    currentUser,
-    currentRule.branch_id,
-    "Manager chi duoc cap nhat bang gia trong chi nhanh cua minh",
-  );
-
+// merge dữ liệu của client vs db
   const mergedData = {
     branch_id: payload.branch_id || currentRule.branch_id.toString(),
     court_type: payload.court_type || currentRule.court_type,
@@ -183,21 +146,15 @@ const updatePricingRule = async (id, payload) => {
         : currentRule.price_per_hour,
   };
 
-  assertManagerBranchAccess(
-    currentUser,
-    mergedData.branch_id,
-    "Manager khong duoc chuyen bang gia sang chi nhanh khac",
-  );
-
   const newStart = toMinutes(mergedData.start_time);
   const newEnd = toMinutes(mergedData.end_time);
 
   if (newStart >= newEnd) {
     throw createAppError("start_time phải nhỏ hơn end_time", 400, "ERR_INVALID_TIME_RANGE");
   }
-
+  // lọc
   const existingRules = await PricingRule.find({
-    _id: { $ne: new mongoose.Types.ObjectId(id) },
+    _id: { $ne: new mongoose.Types.ObjectId(id) }, //query tất cả rule khác id này
     branch_id: mergedData.branch_id,
     court_type: mergedData.court_type,
     day_type: mergedData.day_type,
@@ -215,7 +172,7 @@ const updatePricingRule = async (id, payload) => {
     throw createAppError(
       `Khoảng thời gian này đã bị trùng lặp với một quy tắc giá khác (${overlappedRule.start_time} - ${overlappedRule.end_time}) trong cùng chi nhánh, loại sân và loại ngày.`,
       409,
-      "ERR_TIME_OVERLAP",
+      "ERR_TIME_OVERLAP"
     );
   }
 
@@ -232,7 +189,7 @@ const updatePricingRule = async (id, payload) => {
   return currentRule;
 };
 
-const deletePricingRule = async (id, currentUser) => {
+const deletePricingRule = async (id) => {
   const currentRule = await PricingRule.findOne({
     _id: id,
     is_deleted: false,
@@ -242,17 +199,12 @@ const deletePricingRule = async (id, currentUser) => {
     throw createAppError("Không tìm thấy cấu hình giá", 404, "ERR_PRICING_RULE_NOT_FOUND");
   }
 
-  assertManagerBranchAccess(
-    currentUser,
-    currentRule.branch_id,
-    "Manager chi duoc xoa bang gia trong chi nhanh cua minh",
-  );
-
   currentRule.is_deleted = true;
   await currentRule.save();
 
   return null;
 };
+
 
 module.exports = {
   getPricingRules,

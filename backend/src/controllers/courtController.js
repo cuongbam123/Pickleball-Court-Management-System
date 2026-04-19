@@ -2,7 +2,11 @@ const courtService = require("../services/courtService");
 
 const getAllCourts = async (req, res, next) => {
   try {
-    const result = await courtService.getAllCourts(req.query, req.user);
+    const userRole = req.user?.role;
+    const result = await courtService.getAllCourts(
+      req.query,
+      userRole
+    );
 
     res.status(200).json({
       success: true,
@@ -18,8 +22,13 @@ const getAllCourts = async (req, res, next) => {
 const getCourtsByBranch = async (req, res, next) => {
   try {
     const { branchId } = req.params;
+    const userRole = req.user?.role;
 
-    const result = await courtService.getCourtsByBranch(branchId, req.query, req.user);
+    const result = await courtService.getCourtsByBranch(
+      branchId,
+      req.query,
+      userRole,
+    );
 
     res.status(200).json({
       success: true,
@@ -35,7 +44,7 @@ const getCourtsByBranch = async (req, res, next) => {
 const createCourt = async (req, res, next) => {
   try {
     const { branchId } = req.params;
-    const court = await courtService.createCourt(branchId, req.body, req.user);
+    const court = await courtService.createCourt(branchId, req.body);
 
     res.status(201).json({
       success: true,
@@ -50,7 +59,7 @@ const createCourt = async (req, res, next) => {
 const getCourtById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const court = await courtService.getCourtById(id, req.user);
+    const court = await courtService.getCourtById(id);
 
     res.status(200).json({
       success: true,
@@ -65,8 +74,10 @@ const getCourtById = async (req, res, next) => {
 const updateCourt = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const court = await courtService.updateCourt(id, req.body, req.user);
-    res.status(200).json({ success: true, message: "Cập nhật sân thành công", data: court });
+    const court = await courtService.updateCourt(id, req.body);
+    res
+      .status(200)
+      .json({ success: true, message: "Cập nhật sân thành công", data: court });
   } catch (err) {
     next(err);
   }
@@ -77,7 +88,7 @@ const updateCourtStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const court = await courtService.updateCourtStatus(id, status, req.user);
+    const court = await courtService.updateCourtStatus(id, status);
     res.status(200).json({
       success: true,
       message: "Cập nhật trạng thái sân thành công",
@@ -92,7 +103,7 @@ const updateCourtTagStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { tagStatus } = req.body;
-    const court = await courtService.updateCourtTagStatus(id, tagStatus, req.user);
+    const court = await courtService.updateCourtTagStatus(id, tagStatus);
     res.status(200).json({
       success: true,
       message: "Cập nhật trạng thái tag sân thành công",
@@ -106,8 +117,10 @@ const updateCourtTagStatus = async (req, res, next) => {
 const deleteCourt = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await courtService.deleteCourt(id, req.user);
-    res.status(200).json({ success: true, message: "Xóa sân thành công", data: null });
+    await courtService.deleteCourt(id);
+    res
+      .status(200)
+      .json({ success: true, message: "Xóa sân thành công", data: null });
   } catch (err) {
     next(err);
   }

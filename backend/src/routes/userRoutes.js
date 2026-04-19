@@ -2,7 +2,11 @@ const express = require("express");
 const router = express.Router();
 
 const userController = require("../controllers/userController");
-const { validate, authenticate, authorizeRoles } = require("../middlewares/index");
+const {
+  validate,
+  authenticate,
+  authorizeRoles,
+} = require("../middlewares/index");
 
 const {
   getUsers,
@@ -13,13 +17,23 @@ const {
   updateMe,
 } = require("../validations/userValidation");
 
-router.get("/me", authenticate, userController.getMe);
-router.put("/me", authenticate, validate(updateMe), userController.updateMe);
+// endpoints
+router.get(
+  "/me",
+  authenticate,
+  userController.getMe
+);
+router.put(
+  "/me",
+  authenticate,
+  validate(updateMe),
+  userController.updateMe
+);
 
 router.get(
   "/",
   authenticate,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   validate(getUsers),
   userController.getUsers,
 );
@@ -28,7 +42,7 @@ router.get(
   "/:id",
   authenticate,
   validate(getUserById),
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   userController.getUserById,
 );
 
@@ -36,14 +50,14 @@ router.put(
   "/:id",
   authenticate,
   validate(updateUser),
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   userController.updateUser,
 );
 
 router.patch(
   "/:id/rank",
   authenticate,
-  authorizeRoles("admin", "manager", "staff"),
+  authorizeRoles("admin", "staff"),
   validate(updateUserRank),
   userController.updateUserRank,
 );
@@ -51,7 +65,7 @@ router.patch(
 router.delete(
   "/:id",
   authenticate,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   validate(deleteUser),
   userController.deleteUser,
 );
@@ -59,8 +73,7 @@ router.delete(
 router.get(
   "/dashboard/stats",
   authenticate,
-  authorizeRoles("admin", "manager"),
+  authorizeRoles("admin"),
   userController.getDashboardStats,
 );
-
 module.exports = router;

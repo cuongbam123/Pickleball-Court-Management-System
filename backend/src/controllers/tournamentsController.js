@@ -1,7 +1,8 @@
 const tournamentService = require("../services/tournamentsService");
 
-const createNewTournament = async (req, res, next) => {
-  try {
+// CREATE(ADMIN)
+const createNewTournament = async (req, res) => {
+   try {
     const tournament = await tournamentService.createTournament(req.body, req.user);
     return res.status(201).json({
       success: true,
@@ -12,58 +13,61 @@ const createNewTournament = async (req, res, next) => {
         status: tournament.status,
         created_at: tournament.createdAt,
         branch_id: tournament.branch_id,
-      },
+      }
     });
   } catch (error) {
-    next(error);
+    console.error(error);
+    res.status(500).json({ message: "Lỗi hệ thống khi tạo giải đấu" });
   }
 };
 
-const getTournaments = async (req, res, next) => {
+//GET
+const getTournaments = async (req,res)=>{
   try {
-    const { tournament, meta } = await tournamentService.getTournaments(req.query);
+    const {tournament ,meta} = await tournamentService.getTournaments(req.query);
     return res.status(200).json({
       success: true,
       message: "Danh sách giải đấu",
       data: tournament,
       meta,
-    });
+    })
   } catch (error) {
-    next(error);
+    console.error(error);
+    res.status(500).json({message: "Lỗi hệ thống khi tạo giải đấu"})
   }
-};
+}
 
-const getTournamentId = async (req, res, next) => {
+//GET:ID
+const getTournamentId = async (req,res,next)=>{
   try {
     const tournament = await tournamentService.getTournamentsId(req.params.id);
     return res.status(200).json({
       success: true,
       data: tournament,
-    });
+    })
   } catch (error) {
-    next(error);
+    next(error)
   }
-};
+}
+
 //PATCH(ADMIN)
-const updateTournamentStatus = async (req, res, next) => {
+const updateTournamentStatus = async (req,res)=>{
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const updateStatus = await tournamentService.updateTournamentStatus(
-      id,
-      status,
-      req.user,
-    );
+    const {id} = req.params;
+    const {status}= req.body;
+    const updateStatus = await tournamentService.updateTournamentStatus(id, status , req.user);
     return res.status(200).json({
       success: true,
-      message: "Cập nhật trạng thái giải đấu thành công",
+      message: "Cập nhật trạng thái thành công",
       data: updateStatus,
-    });
+    })
   } catch (error) {
-    next(error);
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
-};
-
+}
 module.exports = {
   createNewTournament,
   getTournaments,
