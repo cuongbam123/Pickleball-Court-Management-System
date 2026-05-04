@@ -59,6 +59,10 @@ const bookingSchema = new mongoose.Schema(
       ref: "users",
       default: null,
     },
+    expires_at: {
+      type: Date,
+      default: null,
+    },
     cancelled_by: {
       type: mongoose.Schema.Types.Mixed, // Có thể là ObjectId (người dùng/admin) hoặc String ('system')
       default: null,
@@ -94,7 +98,7 @@ bookingSchema.index({ branch_id: 1, start_time: 1 });
 bookingSchema.index({ user_id: 1, createdAt: -1 });
 
 // Hỗ trợ Worker/TTL quét booking hết hạn giữ chỗ
-bookingSchema.index({ status: 1, start_time: 1 });
+bookingSchema.index({ status: 1, expires_at: 1 });
 
 const Booking = mongoose.model("Bookings", bookingSchema);
 

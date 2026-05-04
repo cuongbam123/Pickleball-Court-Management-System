@@ -5,7 +5,6 @@ import { getBranches } from "../../facility/api/branchApi";
 import { getAllCourts, getCourtsByBranch } from "../../facility/api/courtApi";
 import { useAuthStore } from "../../../store/authStore";
 import {
-  clearPendingBookingDraft,
   readPendingBookingDraft,
 } from "../constants/pendingBooking";
 
@@ -23,6 +22,26 @@ export const useBookingPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [isLoadingCourts, setIsLoadingCourts] = useState(false);
+
+  const buildDraftSlots = useCallback(
+    (draft) => {
+      if (!Array.isArray(draft?.selectedSlots) || draft.selectedSlots.length === 0) {
+        return [];
+      }
+      return draft.selectedSlots.map((slot) => ({
+        courtId: slot.courtId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        pricePerHour: slot.pricePerHour,
+        userInfo: slot.userInfo || {
+          name: user?.full_name || user?.name || "",
+          email: user?.email || "",
+          phone: user?.phone || "",
+        },
+      }));
+    },
+    [user],
+  );
 
   useEffect(() => {
     getBranches().then((res) => {
@@ -76,24 +95,28 @@ export const useBookingPage = () => {
       setSelectedDate(dayjs(draft.selectedDate).toDate());
     }
 
-    if (Array.isArray(draft.selectedSlots) && draft.selectedSlots.length > 0) {
-      setSelectedSlots(
-        draft.selectedSlots.map((slot) => ({
-          courtId: slot.courtId,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          userInfo: slot.userInfo || {
-            name: user?.full_name || user?.name || "",
-            email: user?.email || "",
-            phone: user?.phone || "",
-          },
-        })),
-      );
+    const restoredSlots = buildDraftSlots(draft);
+    if (restoredSlots.length > 0) {
+      setSelectedSlots(restoredSlots);
     }
 
     restoredDraftRef.current = true;
-    clearPendingBookingDraft();
-  }, [location.state, user]);
+  }, [location.state, buildDraftSlots]);
+
+  // Fail-safe: trong một số trường hợp effect khác có thể reset selectedSlots về []
+  // sau khi restore; khi đó nạp lại từ draft nếu còn.
+  useEffect(() => {
+    if (selectedSlots.length > 0) return;
+
+    const draft =
+      location.state?.restoreBookingDraft || readPendingBookingDraft();
+    if (!draft) return;
+
+    const restoredSlots = buildDraftSlots(draft);
+    if (restoredSlots.length > 0) {
+      setSelectedSlots(restoredSlots);
+    }
+  }, [selectedSlots.length, location.state, buildDraftSlots]);
 
   const handleSelectSlot = (court, slot) => {
     setSelectedSlots((prev) => {

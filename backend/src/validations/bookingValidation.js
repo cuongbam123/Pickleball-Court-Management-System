@@ -1,5 +1,4 @@
 const Joi = require("joi");
-const User = require("../models/users");
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
@@ -10,8 +9,12 @@ const getBookingsValidation = {
     }),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(100),
-    user_id: Joi.string().optional(),
-    status: Joi.string().optional(),
+    user_id: Joi.string().pattern(objectIdRegex).optional().messages({
+      "string.pattern.base": "user_id không hợp lệ",
+    }),
+    status: Joi.string()
+      .valid("holding", "deposited", "playing", "completed", "cancelled")
+      .optional(),
     date: Joi.date().optional(),
   }),
 };
@@ -68,10 +71,10 @@ const holdBookingValidation = {
       "date.format": "end_time phải là ISO date",
     }),
     // Thêm validation cho buffer_time (thời gian đệm dọn sân)
-    buffer_time: Joi.number().integer().min(0).max(60).default(10).messages({
+    buffer_time: Joi.number().integer().min(5).max(10).default(10).messages({
       "number.base": "buffer_time phải là số",
-      "number.min": "buffer_time không được nhỏ hơn 0",
-      "number.max": "buffer_time không được vượt quá 60 phút",
+      "number.min": "buffer_time phải từ 5 phút",
+      "number.max": "buffer_time không được vượt quá 10 phút",
     }),
     booking_type: Joi.string()
       .valid("standard", "shared_match")

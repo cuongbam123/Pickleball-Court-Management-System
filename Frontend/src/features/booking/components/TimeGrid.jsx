@@ -18,8 +18,20 @@ const TimeGrid = ({
       return "bg-slate-800 border-slate-900 cursor-not-allowed opacity-90";
     }
 
-    if ([ "deposited", "holding", "completed", "playing"].includes(slot.status)) {
-      return "bg-slate-300 cursor-not-allowed border-slate-400 opacity-60"; 
+    if (slot.status === "holding") {
+      return "bg-amber-100 cursor-not-allowed border-amber-300";
+    }
+
+    if (slot.status === "deposited") {
+      return "bg-emerald-100 cursor-not-allowed border-emerald-300";
+    }
+
+    if (slot.status === "playing") {
+      return "bg-blue-100 cursor-not-allowed border-blue-300";
+    }
+
+    if (slot.status === "completed") {
+      return "bg-slate-200 cursor-not-allowed border-slate-300";
     }
 
     if (slot.status === "maintenance") {
@@ -85,7 +97,10 @@ const TimeGrid = ({
               {court.slots.map((slot, index) => {
                 // KIỂM TRA XEM Ô NÀY CÓ ĐANG ĐƯỢC USER CLICK CHỌN KHÔNG
                 const isSelected = selectedSlots.some(
-                  (s) => s.courtId === court._id && s.startTime === slot.startTime
+                  (s) =>
+                    String(s.courtId) === String(court._id) &&
+                    s.startTime === slot.startTime &&
+                    s.endTime === slot.endTime,
                 );
 
                 return (

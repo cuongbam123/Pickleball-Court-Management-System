@@ -21,7 +21,6 @@ const CustomerBookingPage = () => {
     isLoadingCourts,
     handleSelectSlot,
     setSelectedSlots,
-    quickUpdateTagStatus,
   } = useBookingPage();
 
   const {
@@ -188,7 +187,6 @@ const CustomerBookingPage = () => {
                 timeHeaders={timeHeaders}
                 selectedSlots={selectedSlots}
                 onSelectSlot={handleSelectSlot}
-                onQuickUpdateStatus={quickUpdateTagStatus}
               />
             </div>
 

@@ -133,10 +133,7 @@ export const useTimeGrid = (branchId, courtId, date, courtsList = []) => {
           if (courtObj.status === "maintenance") {
             slotStatus = "maintenance";
           } else if (matchedBooking) {
-            slotStatus =
-              matchedBooking.status === "completed"
-                ? "playing"
-                : matchedBooking.status || "booked";
+            slotStatus = matchedBooking.status || "holding";
           }
 
           // ĐẨY VÀO MẢNG

@@ -361,6 +361,7 @@ const holdBooking = async (body, user) => {
             total_court_price,
             hold_token: finalHoldToken,
             hold_owner: user.userId,
+            expires_at: initialStatus === "holding" ? expires_at : null,
           },
         ],
         { session },
@@ -527,6 +528,7 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
 
       booking.status = "deposited";
       booking.hold_token = null;
+      booking.expires_at = null;
       booking.payment_method = "vnpay";
       await booking.save({ session });
 
@@ -753,6 +755,8 @@ const cancelBooking = async (bookingId, reason, user) => {
       booking.cancel_at = now;
       booking.refund_status = "refunded";
       booking.cancelled_by = user.userId;
+      booking.hold_token = null;
+      booking.expires_at = null;
       // trả sân
       if (
         now >= new Date(booking.start_time.getTime() - 30 * 60000) &&

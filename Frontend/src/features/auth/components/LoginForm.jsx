@@ -50,9 +50,16 @@ const LoginForm = () => {
         access_token: access_token,
         refresh_token: refresh_token,
       });
+      const returnUrlFromQuery = searchParams.get("returnUrl");
       const redirectFromQuery = searchParams.get("redirect");
+      const returnUrlFromState = location.state?.returnUrl;
       const redirectFromState = location.state?.from;
-      const redirectPath = redirectFromQuery || redirectFromState || "";
+      const redirectPath =
+        returnUrlFromQuery ||
+        redirectFromQuery ||
+        returnUrlFromState ||
+        redirectFromState ||
+        "";
       const safeRedirectPath = redirectPath.startsWith("/") ? redirectPath : "";
       const pendingBookingDraft = readPendingBookingDraft();
       const canRestoreBookingDraft =

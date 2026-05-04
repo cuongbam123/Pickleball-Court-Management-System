@@ -4,7 +4,11 @@ import { useAuthStore } from "../../../store/authStore";
 import dayjs from "dayjs";
 import Button from "../../../components/ui/Button";
 import { createBooking } from "../api/bookingApi";
-import { writePendingBookingDraft } from "../constants/pendingBooking";
+import {
+  clearPendingBookingDraft,
+  readPendingBookingDraft,
+  writePendingBookingDraft,
+} from "../constants/pendingBooking";
 
 const BookingForm = ({
   selectedSlots,
@@ -40,7 +44,7 @@ const BookingForm = ({
   }, [selectedSlots]);
 
   useEffect(() => {
-    const draft = location.state?.restoreBookingDraft;
+    const draft = location.state?.restoreBookingDraft || readPendingBookingDraft();
     if (!draft) return;
 
     if (draft.formData) {
@@ -49,7 +53,7 @@ const BookingForm = ({
         ...draft.formData,
       }));
     }
-
+    clearPendingBookingDraft();
   }, [location.state]);
 
   const handleChange = (e) => {
@@ -79,21 +83,35 @@ const BookingForm = ({
     }
 
     if (!user || !access_token) {
-      alert("Vui lòng đăng nhập để tiếp tục đặt sân!");
-      // Chuyển hướng sang trang login, có thể truyền thêm tham số redirect để login xong quay lại đây
-      //luuw location vaf field did theo
       const redirectPath =
         `${location.pathname}${location.search}${location.hash}` || "/booking";
+
+      const normalizedSlots = selectedSlots.map((slot) => ({
+        courtId: slot.courtId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        userInfo: {
+          ...(slot.userInfo || {}),
+          name: formData.name || slot.userInfo?.name || "",
+          phone: formData.phone || slot.userInfo?.phone || "",
+          email: formData.email || slot.userInfo?.email || "",
+        },
+        pricePerHour: slot.pricePerHour || 0,
+      }));
+
       writePendingBookingDraft({
+        returnUrl: redirectPath,
         redirect: redirectPath,
         selectedBranch,
         selectedDate: dayjs(selectedDate).toISOString(),
-        selectedSlots: selectedSlots.map((slot) => ({
-          courtId: slot.courtId,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          userInfo: slot.userInfo || {},
-        })),
+        selectedSlots: normalizedSlots,
+        bookingSummary: {
+          mergedTime,
+          durationHours,
+          estimatedPrice,
+          depositAmount: Math.round(estimatedPrice / 2),
+          courtId: normalizedSlots[0]?.courtId || "",
+        },
         formData: {
           name: formData.name,
           email: formData.email,
@@ -101,8 +119,14 @@ const BookingForm = ({
           note: formData.note,
         },
       });
-      navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`);
-      return; // Dừng lại, không chạy code API bên dưới
+      navigate(`/login?returnUrl=${encodeURIComponent(redirectPath)}`, {
+        state: {
+          from: redirectPath,
+          returnUrl: redirectPath,
+          reason: "booking_requires_login",
+        },
+      });
+      return;
     }
 
     // 2. Tách giờ từ phần tử ĐẦU TIÊN và CUỐI CÙNG của mảng
@@ -134,7 +158,7 @@ const BookingForm = ({
       court_id: selectedSlots[0].courtId,
       start_time: startTime,
       end_time: endTime,
-      buffer_time: 0,
+      buffer_time: 10,
       booking_type: "standard",
       customer_info: {
         name: formData.name,
@@ -252,7 +276,6 @@ const BookingForm = ({
         >
           Đặt sân
         </Button>
-        submit
       </form>
     </div>
   );
