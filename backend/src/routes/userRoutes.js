@@ -15,6 +15,7 @@ const {
   updateUserRank,
   deleteUser,
   updateMe,
+  createStaffAccount,
 } = require("../validations/userValidation");
 
 // endpoints
@@ -33,7 +34,7 @@ router.put(
 router.get(
   "/",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   validate(getUsers),
   userController.getUsers,
 );
@@ -42,7 +43,7 @@ router.get(
   "/:id",
   authenticate,
   validate(getUserById),
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   userController.getUserById,
 );
 
@@ -50,8 +51,16 @@ router.put(
   "/:id",
   authenticate,
   validate(updateUser),
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   userController.updateUser,
+);
+
+router.post(
+  "/staff",
+  authenticate,
+  authorizeRoles("admin", "manager"),
+  validate(createStaffAccount),
+  userController.createStaffAccount,
 );
 
 router.patch(
@@ -82,7 +91,7 @@ router.delete(
 router.get(
   "/dashboard/stats",
   authenticate,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   userController.getDashboardStats,
 );
 module.exports = router;

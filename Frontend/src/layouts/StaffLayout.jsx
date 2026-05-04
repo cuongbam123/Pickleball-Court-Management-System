@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Sidebar from "../../src/components/layout/Sidebar";
+import { useThemeMode } from "../hooks/useThemeMode";
 
 const staffItems = [
   { label: "Tổng quan", to: "/home" },
@@ -12,12 +13,20 @@ const staffItems = [
 
 const StaffLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const { isDarkMode, toggleTheme } = useThemeMode();
 
   return (
-    <div className="min-h-screen bg-slate-100 flex">
+    <div className="flex min-h-screen bg-transparent dark:bg-slate-950">
       {/* Sidebar desktop */}
       <div className="hidden lg:block">
-        <Sidebar items={staffItems} />
+        <Sidebar
+          items={staffItems}
+          collapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
+          isDarkMode={isDarkMode}
+          onToggleTheme={toggleTheme}
+        />
       </div>
 
       {/* Sidebar mobile */}
@@ -28,7 +37,7 @@ const StaffLayout = ({ children }) => {
       >
         {/* Overlay */}
         <div
-          className={`absolute inset-0 bg-black/40 transition-opacity duration-300 ${
+          className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] transition-opacity duration-300 ${
             isOpen ? "opacity-100" : "opacity-0"
           }`}
           onClick={() => setIsOpen(false)}
@@ -44,11 +53,13 @@ const StaffLayout = ({ children }) => {
             <Sidebar
               items={staffItems}
               onItemClick={() => setIsOpen(false)}
+              isDarkMode={isDarkMode}
+              onToggleTheme={toggleTheme}
             />
 
             <button
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 rounded-lg p-2 hover:bg-slate-100"
+              className="absolute top-4 right-4 rounded-lg p-2 transition hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <X size={22} />
             </button>
@@ -59,17 +70,17 @@ const StaffLayout = ({ children }) => {
       {/* Main content */}
       <div className="flex-1 min-w-0">
         {/* Mobile header */}
-        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 lg:hidden">
+        <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 lg:hidden">
           <button
             onClick={() => setIsOpen(true)}
-            className="rounded-lg p-2 hover:bg-slate-100"
+            className="rounded-lg p-2 transition hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <Menu size={24} />
           </button>
-          <h1 className="text-lg font-semibold">Staff Dashboard</h1>
+          <h1 className="text-lg font-semibold text-slate-900 dark:text-white">Manager Workspace</h1>
         </header>
 
-        <main className="p-4 lg:p-8">{children}</main>
+        <main className="p-4 transition-all duration-300 lg:p-8">{children}</main>
       </div>
     </div>
   );

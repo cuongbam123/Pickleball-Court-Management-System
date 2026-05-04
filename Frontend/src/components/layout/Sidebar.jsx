@@ -79,20 +79,49 @@
 // export default Sidebar;
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import clsx from "clsx";
+import { ChevronLeft, ChevronRight, LogOut, Moon, Sun } from "lucide-react";
 
-const Sidebar = ({ items = [] }) => {
+const Sidebar = ({
+  items = [],
+  collapsed = false,
+  onToggleCollapse,
+  isDarkMode = false,
+  onToggleTheme,
+  onItemClick,
+}) => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   return (
-    <aside className=" min-h-screen w-72 border-r border-slate-200 bg-white lg:block">
-      <div className="p-5">
-        <Logo />
+    <aside
+      className={clsx(
+        "flex min-h-screen flex-col border-r border-slate-200/80 bg-white/95 backdrop-blur transition-all duration-300 dark:border-slate-700 dark:bg-slate-900/95 lg:block",
+        collapsed ? "w-[88px]" : "w-72",
+      )}
+    >
+      <div className="flex items-center justify-between border-b border-slate-200/80 p-4 dark:border-slate-700">
+        <Logo compact={collapsed} />
+        {onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white lg:inline-flex"
+            title={collapsed ? "Mở rộng sidebar" : "Thu gọn sidebar"}
+          >
+            {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          </button>
+        ) : null}
       </div>
 
-      <div className="space-y-1 px-3">
+      <div className="flex-1 px-3 py-4">
+        {!collapsed ? (
+          <p className="px-3 pb-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">
+            Điều hướng
+          </p>
+        ) : null}
         {items.map((item) => {
           const isActive = location.pathname === item.to;
 
@@ -100,17 +129,47 @@ const Sidebar = ({ items = [] }) => {
             <Link
               key={item.to}
               to={item.to}
+              onClick={onItemClick}
               className={clsx(
-                "block rounded-2xl px-4 py-3 text-sm font-medium transition",
+                "mb-1.5 flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
+                collapsed ? "justify-center gap-0" : "gap-2",
                 isActive
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "text-slate-700 hover:bg-slate-50"
+                  ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:ring-blue-400/20"
+                  : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
               )}
+              title={collapsed ? item.label : undefined}
             >
-              {item.label}
+              <span
+                className={clsx(
+                  "h-2.5 w-2.5 rounded-full transition",
+                  isActive ? "bg-blue-500" : "bg-slate-300 dark:bg-slate-500",
+                )}
+              />
+              {!collapsed ? item.label : null}
             </Link>
           );
         })}
+      </div>
+
+      <div className="border-t border-slate-200/80 p-3 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          title={isDarkMode ? "Chuyển sang Light mode" : "Chuyển sang Dark mode"}
+        >
+          {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+          {!collapsed ? (isDarkMode ? "Light mode" : "Dark mode") : null}
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/logout")}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-900/20"
+          title="Đăng xuất"
+        >
+          <LogOut size={16} />
+          {!collapsed ? "Đăng xuất" : null}
+        </button>
       </div>
     </aside>
   );

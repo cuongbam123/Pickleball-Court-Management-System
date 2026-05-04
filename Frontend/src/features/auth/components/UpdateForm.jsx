@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from "react";
-import useAdminStaff from "../../admin/hooks/useAdminStaff";
+import clsx from "clsx";
 
-const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
-  const { branches,isLoading } = useAdminStaff();
+const AdminStaffForm = ({
+  user,
+  branches = [],
+  currentActorRole = "admin",
+  onCancel,
+  onSubmit,
+}) => {
+  const isManagerActor = currentActorRole === "manager";
+
   const [formData, setFormData] = useState({
     full_name: "",
     email: "",
@@ -19,21 +26,26 @@ const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
         full_name: user.full_name || "",
         email: user.email || "",
         phone: user.phone || "",
-        branch: user.branch_id || "",
+        role: user.role || "customer",
+        loyalty_tier: user.loyalty_tier || "standard",
+        branch:
+          typeof user.branch_id === "object"
+            ? user.branch_id?._id || ""
+            : user.branch_id || "",
         rank: user.skill_rank || "", // Đảm bảo rank được điền đúng cho customer
         elo_score: user.elo_score || "", // Đảm bảo elo_score được điền đúng cho customer
       });
     }
   }, [user]);
-    // Cập nhật formData khi branches thay đổi
+
   useEffect(() => {
     if (branches && branches.length > 0 && !formData.branch) {
       setFormData((prevFormData) => ({
         ...prevFormData,
-        branch: branches[0]._id,  // Set chi nhánh đầu tiên nếu formData.branch trống
+        branch: branches[0]._id,
       }));
     }
-  }, [branches]);
+  }, [branches, formData.branch]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -44,22 +56,26 @@ const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    if (!user || !onSubmit) return;
 
-  if (!user || !onSubmit) return;
-
-  setIsSubmitting(true);
-  try {
-    // Gửi formData, trong đó đã bao gồm thông tin chi nhánh
-    const updatedData = {
-      ...formData, 
-      branch_id: formData.branch // Cập nhật field branch_id
-    };
-    await onSubmit(user._id, updatedData); // Truyền branch_id vào API call
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    setIsSubmitting(true);
+    try {
+      const updatedData = {
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        role: formData.role,
+        loyalty_tier: formData.loyalty_tier,
+        branch_id: formData.branch || null,
+        rank: formData.rank,
+        elo_score: formData.elo_score,
+      };
+      await onSubmit(user._id, updatedData);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (!user) {
     return <div className="text-sm text-slate-500">Không tìm thấy staff.</div>;
@@ -110,7 +126,59 @@ const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
         />
       </div>
 
-      {/* Hiển thị rank chỉ với customer */}
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">
+          Vai trò
+        </label>
+        <select
+          name="role"
+          value={formData.role}
+          onChange={handleInputChange}
+          disabled={isManagerActor && user.role !== "staff"}
+          className={clsx(
+            "w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500",
+            isManagerActor && user.role !== "staff" && "cursor-not-allowed bg-slate-100",
+          )}
+        >
+          {isManagerActor ? (
+            <>
+              {user.role === "staff" ? (
+                <>
+                  <option value="staff">Staff</option>
+                  <option value="customer">Customer</option>
+                </>
+              ) : (
+                <option value={user.role}>{user.role}</option>
+              )}
+            </>
+          ) : (
+            <>
+              <option value="customer">Customer</option>
+              <option value="staff">Staff</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </>
+          )}
+        </select>
+      </div>
+
+      <div>
+        <label className="mb-1 block text-sm font-medium text-slate-700">
+          Hạng thẻ thành viên
+        </label>
+        <select
+          name="loyalty_tier"
+          value={formData.loyalty_tier}
+          onChange={handleInputChange}
+          className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+        >
+          <option value="standard">Standard</option>
+          <option value="silver">Silver</option>
+          <option value="gold">Gold</option>
+          <option value="diamond">Diamond</option>
+        </select>
+      </div>
+
       {user.role === "customer" && (
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -138,8 +206,7 @@ const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
         </div>
       )}
 
-      {/* Hiển thị branch chỉ với staff */}
-      {user.role === "staff" && (
+      {(formData.role === "staff" || formData.role === "manager") && (
         <div>
           <label className="mb-1 block text-sm font-medium text-slate-700">
             Chi nhánh
@@ -148,20 +215,15 @@ const AdminStaffForm = ({ user, onCancel, onSubmit }) => {
             name="branch"
             value={formData.branch}
             onChange={handleInputChange}
+            disabled={isManagerActor}
             className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
           >
             <option value="">-- Chọn chi nhánh --</option>
-            {isLoading ? (
-              <option value="" disabled>
-                Đang tải chi nhánh...
+            {branches.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.name}
               </option>
-            ) : (
-              branches.map((b) => (
-                <option key={b._id} value={b._id}>
-                  {b.name}
-                </option>
-              ))
-            )}
+            ))}
           </select>
         </div>
       )}

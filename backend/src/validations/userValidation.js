@@ -14,8 +14,16 @@ const getUsers = {
   query: Joi.object({
     page: Joi.number().min(1).default(1),
     limit: Joi.number().min(1).max(100).default(20),
-    role: Joi.string().valid("admin", "staff", "customer"),
+    role: Joi.string().valid("admin", "manager", "staff", "customer"),
     search: Joi.string().allow(""),
+    sortBy: Joi.string().valid(
+      "createdAt",
+      "full_name",
+      "role",
+      "skill_rank",
+      "loyalty_tier",
+    ),
+    sortOrder: Joi.string().valid("asc", "desc").default("desc"),
   }),
 };
 
@@ -34,13 +42,24 @@ const updateUser = {
   body: Joi.object({
     full_name: Joi.string().min(2).max(255),
     email: Joi.string().email(),
-    role: Joi.string().valid("admin", "staff", "customer"),
+    role: Joi.string().valid("admin", "manager", "staff", "customer"),
     phone: Joi.string().pattern(/^[0-9]{9,11}$/),
     branch_id: Joi.when("role", {
-      is: "staff",
+      is: Joi.valid("staff", "manager"),
       then: Joi.string().custom(objectId).required(),
       otherwise: Joi.allow(null),
     }),
+    loyalty_tier: Joi.string().valid("standard", "silver", "gold", "diamond"),
+  }),
+};
+
+const createStaffAccount = {
+  body: Joi.object({
+    full_name: Joi.string().min(2).max(255).required(),
+    email: Joi.string().email().required(),
+    password: Joi.string().min(6).allow("", null),
+    phone: Joi.string().pattern(/^[0-9]{9,11}$/).allow("", null),
+    branch_id: Joi.string().custom(objectId).allow(null),
   }),
 };
 
@@ -94,4 +113,5 @@ module.exports = {
   updateUserRank,
   deleteUser,
   updateMe,
+  createStaffAccount,
 };

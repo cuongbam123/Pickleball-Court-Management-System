@@ -6,6 +6,7 @@ import SelectFilter from "../../components/ui/Filter";
 import AdminStaffForm from "../../features/auth/components/UpdateForm";
 import Modal from "../../components/ui/Modal";
 import clsx from "clsx";
+import { useAuthStore } from "../../store/authStore";
 
 const getBranchId = (branch) => {
   if (!branch) return null;
@@ -14,14 +15,32 @@ const getBranchId = (branch) => {
 };
 
 const AdminStaffPage = () => {
-  const { users, branchNames, isLoading, handleDeleteUser, handleUpdateUser } =
-    useAdminStaff();
+  const {
+    users,
+    branchNames,
+    isLoading,
+    handleDeleteUser,
+    handleUpdateUser,
+    branches,
+    handleCreateStaff,
+    fetchUsers,
+  } = useAdminStaff();
+  const currentUser = useAuthStore((s) => s.user);
+  const isManager = currentUser?.role === "manager";
 
   const [viewMode, setViewMode] = useState("table");
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    full_name: "",
+    email: "",
+    password: "",
+    phone: "",
+    branch_id: isManager ? currentUser?.branch_id || "" : "",
+  });
 
   const selectedUser = users.find((user) => user._id === userToUpdate) || null;
 
@@ -54,6 +73,7 @@ const AdminStaffPage = () => {
     if (result.success) {
       alert("Cập nhật thành công");
       setUserToUpdate(null);
+      fetchUsers({ role: "staff" });
     } else {
       alert("Cập nhật thất bại");
     }
@@ -73,6 +93,29 @@ const AdminStaffPage = () => {
   };
   const handleBranchChange = (value) => {
     setSelectedBranch(value);
+  };
+
+  const handleCreateSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      ...createForm,
+      branch_id: isManager ? currentUser?.branch_id : createForm.branch_id,
+    };
+    const result = await handleCreateStaff(payload);
+    if (result.success) {
+      alert("Tạo/cập nhật nhân viên thành công");
+      setIsCreateOpen(false);
+      setCreateForm({
+        full_name: "",
+        email: "",
+        password: "",
+        phone: "",
+        branch_id: isManager ? currentUser?.branch_id || "" : "",
+      });
+      fetchUsers({ role: "staff" });
+    } else {
+      alert(result.message || "Tạo nhân viên thất bại");
+    }
   };
   const filteredUsers = users.filter((user) => {
     if (selectedBranch) {
@@ -175,6 +218,13 @@ const AdminStaffPage = () => {
           </div>
 
           <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              + Tạo nhân viên
+            </button>
             <div className="flex items-center rounded-lg border bg-white p-1 shadow-sm">
               <button
                 type="button"
@@ -265,9 +315,102 @@ const AdminStaffPage = () => {
       >
         <AdminStaffForm
           user={selectedUser}
+          branches={branches}
+          currentActorRole={currentUser?.role || "admin"}
           onCancel={() => setUserToUpdate(null)}
           onSubmit={handleSubmitUpdate}
         />
+      </Modal>
+
+      <Modal
+        open={isCreateOpen}
+        title="Tạo tài khoản nhân viên"
+        description="Nếu email đã là customer thì hệ thống sẽ nâng cấp lên staff."
+        onClose={() => setIsCreateOpen(false)}
+        hideFooter
+      >
+        <form onSubmit={handleCreateSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Họ tên</label>
+            <input
+              value={createForm.full_name}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, full_name: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
+            <input
+              type="email"
+              value={createForm.email}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, email: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Mật khẩu (bắt buộc nếu email mới)
+            </label>
+            <input
+              type="password"
+              value={createForm.password}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, password: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Số điện thoại</label>
+            <input
+              value={createForm.phone}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, phone: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Chi nhánh</label>
+            <select
+              value={isManager ? currentUser?.branch_id || "" : createForm.branch_id}
+              disabled={isManager}
+              onChange={(e) =>
+                setCreateForm((prev) => ({ ...prev, branch_id: e.target.value }))
+              }
+              className="w-full rounded-xl border border-slate-300 px-4 py-2 outline-none focus:border-blue-500 disabled:bg-slate-100"
+              required
+            >
+              <option value="">-- Chọn chi nhánh --</option>
+              {branches.map((branch) => (
+                <option key={branch._id} value={branch._id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(false)}
+              className="rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Tạo nhân viên
+            </button>
+          </div>
+        </form>
       </Modal>
 
       <Modal
