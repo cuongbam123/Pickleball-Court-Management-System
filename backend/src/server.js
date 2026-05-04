@@ -5,6 +5,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const expireBookingsJob = require('./jobs/expireBookingsJob');
 const autoRankJob = require('./jobs/autoRankJob');
+const tournamentCron = require("./jobs/tournamentCron");
 
 
 // dotenv.config();
@@ -18,6 +19,7 @@ const startServer = async () => {
 
         expireBookingsJob();
         autoRankJob();
+        tournamentCron();
 
         app.listen(PORT, () => {
             console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
