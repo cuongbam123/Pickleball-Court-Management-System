@@ -4,6 +4,7 @@ require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
 const expireBookingsJob = require('./jobs/expireBookingsJob');
+const tournamentCron = require("./jobs/tournamentCron");
 
 
 // dotenv.config();
@@ -16,6 +17,7 @@ const startServer = async () => {
         console.log('✅ Đã kết nối Database thành công.');
 
         expireBookingsJob();
+        tournamentCron();
 
         app.listen(PORT, () => {
             console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);

@@ -30,11 +30,20 @@ const tournamentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open_registration", "ongoing", "completed"],
+      enum: [
+        "open_registration",
+        "close_registration",
+        "ongoing",
+        "completed",
+      ],
       default: "open_registration",
     },
     start_date: {
       type: Date,
+    },
+    start_day_ongoing: {
+      type: Date,
+      required: true,
     },
     end_date: {
       type: Date,
@@ -68,6 +77,7 @@ tournamentSchema.index({ branch_id: 1, createdAt: -1 });
 
 // Query danh sách giải theo khoảng thời gian diễn ra
 tournamentSchema.index({ start_date: 1, end_date: 1 });
+tournamentSchema.index({ status: 1, start_day_ongoing: 1 });
 
 // Tìm kiếm theo tên giải
 tournamentSchema.index({ name: 1 });
