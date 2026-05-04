@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { loginApi } from "../api/authApi";
 import { useAuthStore } from "../../../store/authStore";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  readPendingBookingDraft,
+} from "../../booking/constants/pendingBooking";
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
 
   const [form, setForm] = useState({
@@ -45,24 +50,43 @@ const LoginForm = () => {
         access_token: access_token,
         refresh_token: refresh_token,
       });
+      const redirectFromQuery = searchParams.get("redirect");
+      const redirectFromState = location.state?.from;
+      const redirectPath = redirectFromQuery || redirectFromState || "";
+      const safeRedirectPath = redirectPath.startsWith("/") ? redirectPath : "";
+      const pendingBookingDraft = readPendingBookingDraft();
+      const canRestoreBookingDraft =
+        safeRedirectPath.startsWith("/booking") && pendingBookingDraft;
 
       switch (user.role) {
-        // case "admin":
-        //   navigate("/admin", { replace: true });
-        //   break;
-
-        // case "staff":
-        //   navigate("/staff", { replace: true });
-        //   break;
-
-        // case "customer":
-        //   navigate("/", { replace: true });
-        //   break;
-        //fix lai xiu nha
         case "admin":
         case "staff":
         case "customer":
-         navigate("/home", { replace: true });
+          if (canRestoreBookingDraft) {
+            const normalizedSlots = Array.isArray(pendingBookingDraft.selectedSlots)
+              ? pendingBookingDraft.selectedSlots.map((slot) => ({
+                  ...slot,
+                  userInfo: {
+                    ...(slot.userInfo || {}),
+                    email: user?.email || "",
+                  },
+                }))
+              : [];
+            const normalizedDraft = {
+              ...pendingBookingDraft,
+              formData: {
+                ...(pendingBookingDraft.formData || {}),
+                email: user?.email || "",
+              },
+              selectedSlots: normalizedSlots,
+            };
+            navigate(safeRedirectPath, {
+              replace: true,
+              state: { restoreBookingDraft: normalizedDraft },
+            });
+          } else {
+            navigate("/home", { replace: true });
+          }
           break;
 
         default:

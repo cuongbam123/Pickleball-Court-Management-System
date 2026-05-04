@@ -8,6 +8,9 @@ import ProfileForm from "./../features/auth/components/ProfileForm";
 import RoleHomePage from "../pages/Home/RoleHomePage";
 import HomePage from "../pages/Home/HomePage";
 import StaffBookingPage from "../pages/staff/StaffBookingPage";
+import CustomerBookingPage from "../pages/user/CustomerBookingPage";
+import MyBookingPage from "../pages/user/MyBookingPage";
+import StaffBookingHistoryPage from "../pages/staff/StaffBookingHistoryPage";
 
 //admin
 import AdminHome from "../pages/admin/AdminHome";
@@ -24,11 +27,7 @@ const AppRoutes = () => {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />
-
-        <Route
-          path="/booking"
-          element={<StaffBookingPage />} 
-        />
+        <Route path="/booking" element={<CustomerBookingPage />} />
         <Route
           path="/profile"
           element={
@@ -45,16 +44,26 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-
-        //ADMIN
         <Route
-          path="/admin"
+          path="/my-bookings"
           element={
-            <ProtectedRoute roles={["admin"]}>
-              <AdminHome /> 
+            <ProtectedRoute>
+              <MyBookingPage />
             </ProtectedRoute>
           }
         />
+      //STAFF
+              <Route
+          path="/staff/booking"
+          element={
+            <ProtectedRoute roles={["staff"]}>
+              <StaffBookingPage />
+            </ProtectedRoute>
+          }
+        />
+
+        //ADMIN
+       
         <Route
           path="/admin/branches"
           element={
@@ -87,6 +96,15 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
+          <Route
+            path="/admin/booking-history"
+            element={
+              <ProtectedRoute roles={["admin", "staff"]}>
+                <StaffBookingHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+
         {/* <Route path="/test-ui" element={<TestUI />} /> */}
       </Routes>
     </BrowserRouter>

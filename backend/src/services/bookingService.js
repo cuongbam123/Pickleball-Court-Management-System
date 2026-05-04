@@ -19,24 +19,39 @@ const User = require("../models/users");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 const getBookings = async (query, user) => {
-  const { branch_id, date, court_id, page = 1, limit = 100 } = query;
-
-  if (date === null || date === undefined) {
-    const date = new Date();
-  }
+  const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
+  
   const filter = {
     is_deleted: false,
-    status: { $ne: "cancelled" },
   };
+
+  if (date) {    
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    filter.start_time = {
+      $gte: startOfDay, 
+      $lte: endOfDay   
+    };
+  }
+  
+  if (user_id) { 
+  filter.user_id = user_id;
+}
 
   if (branch_id) {
     filter.branch_id = branch_id;
+  }
+  if (status){
+    filter.status = status;
   }
 
   if (court_id) {
     filter.court_id = court_id;
   }
-
   const skip = (page - 1) * limit;
 
   const [bookings, total_records] = await Promise.all([

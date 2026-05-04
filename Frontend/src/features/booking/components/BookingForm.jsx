@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
 import dayjs from "dayjs";
 import Button from "../../../components/ui/Button";
-import { createBooking, payBooking } from "../api/bookingApi";
+import { createBooking } from "../api/bookingApi";
+import { writePendingBookingDraft } from "../constants/pendingBooking";
 
 const BookingForm = ({
   selectedSlots,
@@ -21,6 +22,9 @@ const BookingForm = ({
     price: "",
     note: "",
   });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, access_token } = useAuthStore();
 
   // T4: Tự động fill thông tin khi có selectedSlots
   useEffect(() => {
@@ -35,6 +39,19 @@ const BookingForm = ({
     }
   }, [selectedSlots]);
 
+  useEffect(() => {
+    const draft = location.state?.restoreBookingDraft;
+    if (!draft) return;
+
+    if (draft.formData) {
+      setFormData((prev) => ({
+        ...prev,
+        ...draft.formData,
+      }));
+    }
+
+  }, [location.state]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -44,13 +61,9 @@ const BookingForm = ({
       ? `${selectedSlots[0].startTime} - ${selectedSlots[selectedSlots.length - 1].endTime}`
       : "";
   const durationHours = selectedSlots.length;
-
   const estimatedPrice = selectedSlots.reduce((total, slot) => {
     return total + (slot.pricePerHour || 0);
   }, 0);
-  const navigate = useNavigate();
-
-  const { user, access_token } = useAuthStore();
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -68,7 +81,27 @@ const BookingForm = ({
     if (!user || !access_token) {
       alert("Vui lòng đăng nhập để tiếp tục đặt sân!");
       // Chuyển hướng sang trang login, có thể truyền thêm tham số redirect để login xong quay lại đây
-      navigate("/login?redirect=/booking");
+      //luuw location vaf field did theo
+      const redirectPath =
+        `${location.pathname}${location.search}${location.hash}` || "/booking";
+      writePendingBookingDraft({
+        redirect: redirectPath,
+        selectedBranch,
+        selectedDate: dayjs(selectedDate).toISOString(),
+        selectedSlots: selectedSlots.map((slot) => ({
+          courtId: slot.courtId,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          userInfo: slot.userInfo || {},
+        })),
+        formData: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          note: formData.note,
+        },
+      });
+      navigate(`/login?redirect=${encodeURIComponent(redirectPath)}`);
       return; // Dừng lại, không chạy code API bên dưới
     }
 

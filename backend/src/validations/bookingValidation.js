@@ -1,4 +1,5 @@
 const Joi = require("joi");
+const User = require("../models/users");
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
@@ -9,6 +10,9 @@ const getBookingsValidation = {
     }),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(100),
+    user_id: Joi.string().optional(),
+    status: Joi.string().optional(),
+    date: Joi.date().optional(),
   }),
 };
 

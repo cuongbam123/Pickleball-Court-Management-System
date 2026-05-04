@@ -45,10 +45,10 @@ import React from "react";
 import Header from "../../src/components/layout/Header";
 import Footer from "../../src/components/layout/Footer";
 
-const MainLayout = ({ user = null, children }) => {
+const MainLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-50">
-      <Header user={user} />
+      <Header />
       <main>{children}</main>
       <Footer />
     </div>

@@ -92,7 +92,7 @@ export const useTimeGrid = (branchId, courtId, date, courtsList = []) => {
             );
           });
 
-          let slotPrice = null; // Giá sàn mặc định nếu không có rule
+          let slotPrice = 0; // Giá sàn mặc định nếu không có rule
 
           // 1. Xác định ngày đang chọn là Ngày thường (weekday) hay Cuối tuần (weekend)
           const dayOfWeek = dayjs(formattedDate).day(); // 0: Chủ nhật, 6: Thứ 7
@@ -105,7 +105,13 @@ export const useTimeGrid = (branchId, courtId, date, courtsList = []) => {
             if (r.is_deleted === true) return false;
 
             // Bỏ qua nếu không đúng Loại Sân (VD: Rule cho sân 4-player nhưng sân hiện tại là 2-player)
-            if (r.court_type && r.court_type !== courtObj.type) return false;
+            if (
+              r.court_type &&
+              r.court_type !== "all" &&
+              r.court_type !== courtObj.type
+            ) {
+              return false;
+            }
 
             // Bỏ qua nếu không đúng Loại Ngày (weekday / weekend)
             if (r.day_type && r.day_type !== currentDayType) return false;
@@ -118,7 +124,7 @@ export const useTimeGrid = (branchId, courtId, date, courtsList = []) => {
             return slotStartStr >= ruleStart && slotStartStr < ruleEnd;
           });
           if (matchedRule) {
-            slotPrice = matchedRule.price_per_hour;
+            slotPrice = Number(matchedRule.price_per_hour) || 0;
           }
           // ------------------------------------------
 
@@ -190,3 +196,4 @@ export const useTimeGrid = (branchId, courtId, date, courtsList = []) => {
     }),
   };
 };
+

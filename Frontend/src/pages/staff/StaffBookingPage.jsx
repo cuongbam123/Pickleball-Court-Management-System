@@ -1,11 +1,10 @@
 import React from "react";
-import MainLayout from "../../layouts/MainLayout"; 
+import StaffLayout from "../../layouts/StaffLayout"; 
 import TimeGrid from "../../features/booking/components/TimeGrid";
 import BookingForm from "../../features/booking/components/BookingForm";
 import { useBookingPage } from "../../features/booking/hooks/useBookingPage";
 import { useTimeGrid } from "../../features/booking/hooks/useTimeGrid"; 
 import { toast } from "react-toastify";
-import { useAuthStore } from "../../store/authStore";
 import dayjs from "dayjs";
 
 const StaffBookingPage = () => {
@@ -64,7 +63,7 @@ const StaffBookingPage = () => {
   };
 
   return (
-    <MainLayout>
+    <StaffLayout>
       <div className="space-y-6">
         
         {/* === FILTER BAR === */}
@@ -182,7 +181,7 @@ const StaffBookingPage = () => {
         )}
 
       </div>
-    </MainLayout>
+    </StaffLayout>
   );
 };
 

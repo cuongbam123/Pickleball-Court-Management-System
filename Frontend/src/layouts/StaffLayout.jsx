@@ -4,10 +4,10 @@ import Sidebar from "../../src/components/layout/Sidebar";
 
 const staffItems = [
   { label: "Tổng quan", to: "/home" },
-  { label: "Đặt sân", to: "/booking" },
+  { label: "Đặt sân", to: "/staff/booking" },
   { label: "POS", to: "/pos" },
   { label: "Khách tại quầy", to: "/walk-in" },
-  { label: "Lịch sân", to: "/schedule" },
+  { label: "Lịch sân", to: "/admin/booking-history" },
 ];
 
 const StaffLayout = ({ children }) => {
