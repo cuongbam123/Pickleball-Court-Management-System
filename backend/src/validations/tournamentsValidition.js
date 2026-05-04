@@ -70,21 +70,33 @@ const getTournamentDetailValidation = {
       }),
   }),
 };
-const updateStatusValidation = Joi.object({
-  status: Joi.string()
-    .trim() // Tự động loại bỏ dấu cách thừa ở 2 đầu (nếu có)
-    .valid(
-      "open_registration", 
-      "closed_registration",
-      "completed", 
-    )
-    .required()
-    .messages({
-      'string.base': 'Trạng thái phải là một chuỗi văn bản.',
-      'any.only': 'Trạng thái không hợp lệ. Chỉ chấp nhận: open_registration, ongoing, completed.',
-      'any.required': 'Trạng thái là bắt buộc.'
-    }),
-});
+const updateStatusValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'ID giải đấu không đúng định dạng hợp lệ',
+        'any.required': 'ID giải đấu là bắt buộc',
+      }),
+  }),
+  body: Joi.object({
+    status: Joi.string()
+      .trim() // Tự động loại bỏ dấu cách thừa ở 2 đầu (nếu có)
+      .valid(
+        "open_registration",
+        "ongoing",
+        "closed_registration",
+        "completed",
+      )
+      .required()
+      .messages({
+        'string.base': 'Trạng thái phải là một chuỗi văn bản.',
+        'any.only': 'Trạng thái không hợp lệ. Chỉ chấp nhận: open_registration, ongoing, closed_registration, completed.',
+        'any.required': 'Trạng thái là bắt buộc.'
+      }),
+  }),
+};
 module.exports = {
   createTournamentValidation,
   getTournamentValidation,

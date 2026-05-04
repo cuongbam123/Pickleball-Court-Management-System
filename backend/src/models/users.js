@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // Tự động tạo Unique Index
+      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "staff", "customer"],
+      enum: ["admin", "manager", "staff", "customer"],
       default: "customer",
     },
     full_name: {
@@ -42,7 +42,15 @@ const userSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "branches",
       default: null,
-      // Logic bắt buộc staff phải có branch_id sẽ được kiểm tra ở Service Layer
+      validate: {
+        validator(value) {
+          if (this.role === "staff" || this.role === "manager") {
+            return !!value;
+          }
+          return true;
+        },
+        message: "role staff/manager bat buoc phai co branch_id",
+      },
     },
     loyalty_points: {
       type: Number,
@@ -62,6 +70,7 @@ const userSchema = new mongoose.Schema(
     elo_score: {
       type: Number,
       default: 1000,
+      min: 0,
     },
     is_deleted: {
       type: Boolean,
@@ -73,6 +82,10 @@ const userSchema = new mongoose.Schema(
     versionKey: false,
   }
 );
+
+// Lưu ý: skill_rank được đồng bộ định kỳ bởi cronjob autoRankJob
+// (backend/src/jobs/autoRankJob.js) dựa trên elo_score, thay vì dùng
+// Mongoose pre-hook. Xem backend/docs/test-plan-role-and-rank.md.
 
 // ================= INDEX =================
 

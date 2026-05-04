@@ -1,7 +1,7 @@
 const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !req.user.role) {
-      return res.status(500).json({
+      return res.status(401).json({
         message: "Thiếu thông tin user",
       });
     }

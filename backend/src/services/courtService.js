@@ -63,7 +63,7 @@ const getCourtsByBranch = async (
     ...(tagStatus && { tagStatus }),
   };
   //check phai admin k
-  if (!isAdmin) {
+  if (!isAdmin(currentUser)) {
     query.is_deleted = false;
   }
 

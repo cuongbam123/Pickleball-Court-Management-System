@@ -62,6 +62,15 @@ router.patch(
   userController.updateUserRank,
 );
 
+// Trigger cron auto-rank thủ công (chỉ admin). Đặt path 2 segments
+// để tránh xung đột với /:id hoặc /:id/rank.
+router.post(
+  "/rank/recompute",
+  authenticate,
+  authorizeRoles("admin"),
+  userController.recomputeRank,
+);
+
 router.delete(
   "/:id",
   authenticate,
