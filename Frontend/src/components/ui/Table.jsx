@@ -25,9 +25,9 @@ export default function Table({
   // 👉 loading state
   if (loading) {
     return (
-      <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+      <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm flex flex-col items-center justify-center space-y-3 dark:border-slate-700 dark:bg-slate-900">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-lime-500 border-t-transparent"></div>
+        <div className="text-slate-600 dark:text-slate-300">Đang tải dữ liệu...</div>
       </div>
     );
   }
@@ -35,7 +35,7 @@ export default function Table({
   // 👉 empty state
   if (!data.length) {
     return (
-      <div className="rounded-2xl border bg-white p-10 shadow-sm text-center text-gray-500">
+      <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm text-center text-gray-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
         {emptyText}
       </div>
     );
@@ -68,14 +68,14 @@ export default function Table({
   return (
     <div
       className={clsx(
-        "overflow-hidden rounded-2xl border bg-white shadow-sm",
+        "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900",
         className
       )}
     >
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           {/* HEADER */}
-          <thead className="bg-gray-50">
+          <thead className="bg-slate-100/80 dark:bg-slate-800">
             <tr>
               {selectable && (
                 <th className="px-4 py-3">
@@ -91,7 +91,7 @@ export default function Table({
               {columns.map((col, index) => (
                 <th
                   key={col.key || col.accessor || index}
-                  className="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap"
+                  className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap dark:text-slate-300"
                 >
                   {col.title || col.header}
                 </th>
@@ -109,10 +109,10 @@ export default function Table({
                   key={row[rowKey] || rowIndex}
                   onClick={() => onRowClick?.(row)}
                   className={clsx(
-                    "border-t transition-colors",
+                    "border-t border-slate-200 transition-colors duration-150 dark:border-slate-700",
                     onRowClick && "cursor-pointer",
-                    "hover:bg-gray-50",
-                    isSelected && "bg-blue-50"
+                    "hover:bg-lime-50/40 dark:hover:bg-slate-800/70",
+                    isSelected && "bg-lime-50 dark:bg-lime-500/10"
                   )}
                 >
                   {selectable && (
@@ -134,7 +134,7 @@ export default function Table({
                     return (
                       <td
                         key={dataKey || colIndex}
-                        className="px-4 py-3 text-gray-700"
+                        className="px-4 py-3.5 text-slate-700 dark:text-slate-200"
                       >
                         {col.render
                           ? col.render(row, rowIndex)

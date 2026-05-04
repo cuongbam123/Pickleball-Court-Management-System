@@ -6,6 +6,7 @@ import SelectFilter from "../../components/ui/Filter";
 import CourtModal from "../../features/facility/components/CourtModal";
 import { useCourts } from "../../features/facility/hooks/useCourts";
 import clsx from "clsx";
+import { LayoutGrid, Table2 } from "lucide-react";
 
 const AdminCourtPage = () => {
   const [selectedBranchFilter, setSelectedBranchFilter] = useState("");
@@ -48,7 +49,7 @@ const AdminCourtPage = () => {
       title: "Tên sân",
       key: "name",
       render: (item) => (
-        <span className="font-bold text-slate-800">{item.name}</span>
+        <span className="font-bold text-slate-900 dark:text-slate-100">{item.name}</span>
       ),
     },
     { title: "Chi nhánh", key: "branch_name" },
@@ -63,10 +64,10 @@ const AdminCourtPage = () => {
       render: (item) => (
         <span
           className={clsx(
-            "px-2 py-1 rounded-full text-xs font-medium",
+            "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
             item.tagStatus === "available"
-              ? "bg-green-100 text-green-700"
-              : "bg-orange-100 text-orange-700",
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+              : "bg-amber-100 text-amber-700",
           )}
         >
           {item.tagStatus}
@@ -80,10 +81,10 @@ const AdminCourtPage = () => {
         <button
           onClick={() => toggleStatus(item._id, item.status)}
           className={clsx(
-            "px-3 py-1 rounded-lg text-sm font-medium transition-colors",
+            "rounded-lg px-3 py-1 text-sm font-medium transition-colors",
             item.status === "active"
-              ? "bg-blue-50 text-blue-600 hover:bg-blue-100"
-              : "bg-slate-100 text-slate-500 hover:bg-slate-200",
+              ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200"
+              : "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-200",
           )}
         >
           {item.status === "active" ? "Hoạt động" : "Bảo trì"}
@@ -96,13 +97,13 @@ const AdminCourtPage = () => {
         <div className="flex gap-3">
           <button
             onClick={() => handleOpenEdit(item)}
-            className="text-blue-600 font-medium hover:underline text-sm"
+            className="text-sm font-medium text-slate-700 transition hover:text-slate-900"
           >
             Sửa
           </button>
           <button
             onClick={() => deleteCourt(item._id)}
-            className="text-red-600 font-medium hover:underline text-sm"
+            className="text-sm font-medium text-rose-600 transition hover:text-rose-700"
           >
             Xóa
           </button>
@@ -111,21 +112,23 @@ const AdminCourtPage = () => {
     },
   ];
   const renderCourtCard = (court) => (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition-shadow h-full flex flex-col">
+    <div className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="font-bold text-lg text-gray-900">{court.name}</h3>
-          <p className="text-sm font-medium text-slate-500">{court.branch_name}</p>
+          <h3 className="font-bold text-lg text-gray-900 dark:text-slate-100">{court.name}</h3>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">{court.branch_name}</p>
         </div>
         <span className={clsx(
-          "px-2 py-1 rounded-full text-xs font-medium",
-          court.tagStatus === "available" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+          "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+          court.tagStatus === "available"
+            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+            : "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200"
         )}>
           {court.tagStatus}
         </span>
       </div>
 
-      <div className="flex-1 space-y-3 text-sm text-gray-600 mb-4">
+      <div className="mb-4 flex-1 space-y-3 text-sm text-gray-700 dark:text-slate-300">
         <p className="flex items-center gap-2">
           <span className="text-lg">👥</span> 
           <span className="font-medium">{court.type === "2-player" ? "Sân 2 Người" : "Sân 4 Người"}</span>
@@ -135,8 +138,10 @@ const AdminCourtPage = () => {
           <button
             onClick={() => toggleStatus(court._id, court.status)}
             className={clsx(
-              "px-2 py-1 rounded-md text-xs font-medium transition-colors",
-              court.status === "active" ? "bg-blue-50 text-blue-600 hover:bg-blue-100" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              "rounded-md px-2 py-1 text-xs font-medium transition-colors",
+              court.status === "active"
+                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-200"
+                : "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-200"
             )}
           >
             {court.status === "active" ? "Đang hoạt động" : "Đang bảo trì"}
@@ -144,16 +149,16 @@ const AdminCourtPage = () => {
         </div>
       </div>
 
-      <div className="pt-4 border-t border-gray-100 flex justify-end gap-3 mt-auto">
+      <div className="mt-auto flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-slate-700">
         <button
           onClick={() => handleOpenEdit(court)}
-          className="px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium transition-colors"
+          className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
         >
           Chỉnh sửa
         </button>
         <button
           onClick={() => deleteCourt(court._id)}
-          className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium transition-colors"
+          className="rounded-lg bg-rose-100 px-3 py-1.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-200 dark:hover:bg-rose-500/30"
         >
           Xóa
         </button>
@@ -169,77 +174,49 @@ const AdminCourtPage = () => {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               Quản lý sân bãi
             </h1>
-            <p className="text-slate-500 text-sm">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Hiển thị tất cả {courts.length} sân trên hệ thống
             </p>
           </div>
-          <div className="bg-white border rounded-lg p-1 flex items-center shadow-sm">
+          <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
             <button
               onClick={() => setViewMode("table")}
               className={clsx(
-                "p-2 rounded-md transition-colors",
+                "rounded-lg p-2 transition-colors",
                 viewMode === "table"
-                  ? "bg-slate-100 text-blue-600"
-                  : "text-slate-400 hover:text-slate-600",
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
               )}
               title="Dạng bảng"
             >
-              {/* Icon Table (Bạn có thể dùng lucide-react, ở đây tôi dùng svg thuần) */}
-              <svg
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="3" y1="15" x2="21" y2="15"></line>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-              </svg>
+              <Table2 size={20} />
             </button>
             <button
               onClick={() => setViewMode("grid")}
               className={clsx(
-                "p-2 rounded-md transition-colors",
+                "rounded-lg p-2 transition-colors",
                 viewMode === "grid"
-                  ? "bg-slate-100 text-blue-600"
-                  : "text-slate-400 hover:text-slate-600",
+                  ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
+                  : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
               )}
               title="Dạng lưới"
             >
-              {/* Icon Grid */}
-              <svg
-                width="20"
-                height="20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
+              <LayoutGrid size={20} />
             </button>
           </div>
           <button
             onClick={handleOpenAdd}
-            className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700 whitespace-nowrap"
+            className="whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
           >
             + Thêm sân mới
           </button>
         </div>
 
         {/* BỘ LỌC CÁC THỨ */}
-        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
+        <div className="flex items-end gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <SelectFilter
             label="Lọc theo chi nhánh"
             options={branches.map((b) => ({ label: b.name, value: b._id }))}

@@ -4,6 +4,7 @@ const Branch = require("../models/branches");
 const Court = require("../models/court");
 const bcrypt = require("bcrypt");
 const {
+  isAdmin,
   isManager,
   toIdString,
   assertHasBranchScope,
@@ -12,9 +13,34 @@ const {
 } = require("../utils/accessControl");
 
 class UserService {
+  async resolveCurrentUser(currentUser) {
+    if (!currentUser?.userId) return null;
+    const actor = await User.findById(currentUser.userId).select(
+      "_id role branch_id is_deleted",
+    );
+    if (!actor || actor.is_deleted) {
+      const error = new Error("Tài khoản thao tác không hợp lệ");
+      error.statusCode = 401;
+      throw error;
+    }
+    return actor;
+  }
+
+  getUserSort(query = {}) {
+    const sortOrder = query.sortOrder === "asc" ? 1 : -1;
+    const sortBy = query.sortBy || "createdAt";
+
+    if (["role", "skill_rank", "loyalty_tier", "full_name", "createdAt"].includes(sortBy)) {
+      return { [sortBy]: sortOrder };
+    }
+
+    return { createdAt: -1 };
+  }
+
   //lấy danh sách user
   async getUsers(query, currentUser) {
     const { page = 1, limit = 20, role, search } = query;
+    const actor = await this.resolveCurrentUser(currentUser);
 
     const filter = { is_deleted: false };
 
@@ -27,16 +53,18 @@ class UserService {
       ];
     }
 
-    if (isManager(currentUser)) {
-      assertHasBranchScope(currentUser);
-      filter.branch_id = currentUser.branch_id;
+    if (isManager(actor)) {
+      assertHasBranchScope(actor);
+      filter.branch_id = actor.branch_id;
     }
 
     const skip = (Number(page) - 1) * Number(limit);
+    const sort = this.getUserSort(query);
 
     const [users, total] = await Promise.all([
       User.find(filter)
         .select("-password")
+        .sort(sort)
         .skip(skip)
         .limit(Number(limit))
         .lean(),
@@ -55,6 +83,7 @@ class UserService {
   }
   //lay chi tiet user
   async getUserById(id, currentUser) {
+    const actor = await this.resolveCurrentUser(currentUser);
     const user = await User.findOne({
       _id: id,
       is_deleted: false,
@@ -63,7 +92,7 @@ class UserService {
     if (!user) throw new Error("Khong tim thay nguoi dung hoac tai khoan da bi khoa");
 
     assertManagerBranchAccess(
-      currentUser,
+      actor,
       user.branch_id,
       "Manager chi duoc xem nguoi dung trong chi nhanh cua minh",
     );
@@ -73,6 +102,7 @@ class UserService {
 
   //cập nhật thông tin user
   async updateUser(id, payload, currentUser) {
+    const actor = await this.resolveCurrentUser(currentUser);
     const user = await User.findOne({
       _id: id,
       is_deleted: false,
@@ -81,26 +111,42 @@ class UserService {
     if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị khóa");
 
     assertManagerBranchAccess(
-      currentUser,
+      actor,
       user.branch_id,
       "Manager chi duoc cap nhat nguoi dung trong chi nhanh cua minh",
     );
 
-    if (
-      isManager(currentUser) &&
-      payload.role &&
-      ["admin", "manager"].includes(payload.role)
-    ) {
-      const error = new Error("Manager khong duoc gan role admin hoac manager");
-      error.statusCode = 403;
-      throw error;
+    if (isManager(actor)) {
+      if (["admin", "manager"].includes(user.role)) {
+        const error = new Error("Manager không được chỉnh sửa tài khoản admin/manager");
+        error.statusCode = 403;
+        throw error;
+      }
+
+      if (payload.role && payload.role !== user.role) {
+        const isOnlyAllowedDowngrade =
+          user.role === "staff" && payload.role === "customer";
+
+        if (!isOnlyAllowedDowngrade) {
+          const error = new Error(
+            "Manager chỉ được phép chuyển role từ staff sang customer",
+          );
+          error.statusCode = 403;
+          throw error;
+        }
+      }
+
+      if (
+        payload.branch_id !== undefined &&
+        toIdString(payload.branch_id) !== toIdString(user.branch_id)
+      ) {
+        const error = new Error("Manager không được chuyển nhân viên sang chi nhánh khác");
+        error.statusCode = 403;
+        throw error;
+      }
     }
 
-    if (
-      currentUser.userId.toString() === id &&
-      payload.role &&
-      payload.role !== user.role
-    ) {
+    if (actor._id.toString() === id && payload.role && payload.role !== user.role) {
       throw new Error("Bạn không thể tự hạ quyền của chính mình");
     }
 
@@ -128,8 +174,8 @@ class UserService {
       payload.branch_id = null;
     }
 
-    if (isManager(currentUser)) {
-      const managerBranchId = toIdString(currentUser.branch_id);
+    if (isManager(actor)) {
+      const managerBranchId = toIdString(actor.branch_id);
       if (
         payload.branch_id !== undefined &&
         toIdString(payload.branch_id) !== managerBranchId
@@ -150,7 +196,7 @@ class UserService {
     //luu log
     await AuditLog.create({
       action: "update_user",
-      user_id: currentUser.userId,
+      user_id: actor._id,
       target_collection: "users",
       target_id: user._id,
       old_value: oldValue,
@@ -160,8 +206,98 @@ class UserService {
     return newValue;
   }
 
+  async createStaffAccount(payload, currentUser) {
+    const actor = await this.resolveCurrentUser(currentUser);
+    const isManagerRole = isManager(actor);
+    const isAdminRole = isAdmin(actor);
+
+    if (!isManagerRole && !isAdminRole) {
+      const error = new Error("Bạn không có quyền tạo tài khoản nhân viên");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const targetBranchId = isManagerRole
+      ? toIdString(actor.branch_id)
+      : toIdString(payload.branch_id);
+
+    if (isManagerRole && !targetBranchId) {
+      const error = new Error("Manager phải được gán branch_id trước khi tạo nhân viên");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (isAdminRole && !targetBranchId) {
+      throw new Error("Admin tạo nhân viên bắt buộc chọn chi nhánh");
+    }
+
+    const existingUser = await User.findOne({
+      email: payload.email.toLowerCase().trim(),
+      is_deleted: false,
+    });
+
+    if (existingUser) {
+      if (existingUser.role !== "customer") {
+        const error = new Error("Email này đã thuộc tài khoản không phải customer");
+        error.statusCode = 409;
+        throw error;
+      }
+
+      const oldValue = existingUser.toObject();
+      existingUser.role = "staff";
+      existingUser.branch_id = targetBranchId;
+      existingUser.full_name = payload.full_name || existingUser.full_name;
+      if (payload.phone !== undefined) existingUser.phone = payload.phone;
+      await existingUser.save();
+
+      await AuditLog.create({
+        action: "promote_customer_to_staff",
+        user_id: actor._id,
+        target_collection: "users",
+        target_id: existingUser._id,
+        old_value: oldValue,
+        new_value: existingUser.toObject(),
+      });
+
+      return {
+        message: "Đã chuyển tài khoản customer sang staff thành công",
+        user: existingUser.toObject(),
+      };
+    }
+
+    if (!payload.password) {
+      throw new Error("Tạo tài khoản mới bắt buộc nhập mật khẩu");
+    }
+
+    const hashedPassword = await bcrypt.hash(payload.password, 10);
+    const createdUser = await User.create({
+      full_name: payload.full_name,
+      email: payload.email.toLowerCase().trim(),
+      password: hashedPassword,
+      phone: payload.phone || "",
+      role: "staff",
+      branch_id: targetBranchId,
+      auth_provider: "local",
+    });
+
+    await AuditLog.create({
+      action: "create_staff_account",
+      user_id: actor._id,
+      target_collection: "users",
+      target_id: createdUser._id,
+      old_value: null,
+      new_value: createdUser.toObject(),
+    });
+
+    return {
+      message: "Tạo tài khoản staff thành công",
+      user: createdUser.toObject(),
+    };
+  }
+
   //up rank
  async updateUserRank(id, payload, currentUser) {
+    const actor = await this.resolveCurrentUser(currentUser);
     const user = await User.findOne({
       _id: id,
       is_deleted: false,
@@ -172,35 +308,35 @@ class UserService {
     }
 
     // Không cho tự cập nhật rank của chính mình (tránh staff/manager tự buff)
-    if (currentUser.userId && currentUser.userId.toString() === id.toString()) {
+    if (actor._id && actor._id.toString() === id.toString()) {
       const error = new Error("Ban khong the tu cap nhat rank cua chinh minh");
       error.statusCode = 403;
       throw error;
     }
 
     // Staff chỉ được cập nhật rank cho customer trong cùng chi nhánh
-    if (currentUser.role === "staff") {
+    if (actor.role === "staff") {
       if (user.role !== "customer") {
         const error = new Error("Staff chi duoc cap nhat rank cho khach hang");
         error.statusCode = 403;
         throw error;
       }
       assertStaffOrManagerBranchAccess(
-        currentUser,
+        actor,
         user.branch_id,
         "Staff chi duoc cap nhat rank trong chi nhanh cua minh",
       );
     }
 
     // Manager chỉ được thao tác trong chi nhánh của mình; ngoài ra không cho đụng vào admin
-    if (currentUser.role === "manager" && user.role === "admin") {
+    if (actor.role === "manager" && user.role === "admin") {
       const error = new Error("Manager khong duoc cap nhat rank cua admin");
       error.statusCode = 403;
       throw error;
     }
 
     assertManagerBranchAccess(
-      currentUser,
+      actor,
       user.branch_id,
       "Manager chi duoc cap nhat rank trong chi nhanh cua minh",
     );
@@ -217,7 +353,7 @@ class UserService {
     //luu log vào AuditLog
     await AuditLog.create({
       action: "update_user_rank",
-      user_id: currentUser.userId,
+      user_id: actor._id,
       target_collection: "users",
       target_id: user._id,
       old_value: oldValue,
@@ -229,6 +365,7 @@ class UserService {
 
   //xoa user nhung van luu db de truy van va log
   async deleteUser(id, currentUser) {
+    const actor = await this.resolveCurrentUser(currentUser);
     //tim úuser
     const user = await User.findOne({
       _id: id,
@@ -237,17 +374,17 @@ class UserService {
 
     if (!user) throw new Error("Không tìm thấy người dùng hoặc tài khoản đã bị xóa trước đó");
 
-    if (currentUser.userId.toString() === id) {
+    if (actor._id.toString() === id) {
       throw new Error("Bạn không thể tự xóa tài khoản của chính mình");
     }
 
     assertManagerBranchAccess(
-      currentUser,
+      actor,
       user.branch_id,
       "Manager chi duoc khoa tai khoan trong chi nhanh cua minh",
     );
 
-    if (isManager(currentUser) && user.role === "admin") {
+    if (isManager(actor) && user.role === "admin") {
       const error = new Error("Manager khong duoc xoa tai khoan admin");
       error.statusCode = 403;
       throw error;
@@ -263,7 +400,7 @@ class UserService {
     //luu log
     await AuditLog.create({
       action: "delete_user",
-      user_id: currentUser.userId,
+      user_id: actor._id,
       target_collection: "users",
       target_id: user._id,
       old_value: oldValue,
@@ -378,22 +515,23 @@ class UserService {
   }
 
   async getDashboardStats(currentUser) {
-    const isManagerRole = isManager(currentUser);
+    const actor = await this.resolveCurrentUser(currentUser);
+    const isManagerRole = isManager(actor);
 
     if (isManagerRole) {
-      assertHasBranchScope(currentUser);
+      assertHasBranchScope(actor);
     }
 
     const branchScope = isManagerRole
-      ? { _id: currentUser.branch_id, is_deleted: false }
+      ? { _id: actor.branch_id, is_deleted: false }
       : { is_deleted: false };
 
     const courtScope = isManagerRole
-      ? { status: "active", is_deleted: false, branch_id: currentUser.branch_id }
+      ? { status: "active", is_deleted: false, branch_id: actor.branch_id }
       : { status: "active", is_deleted: false };
 
     const staffScope = isManagerRole
-      ? { role: "staff", is_deleted: false, branch_id: currentUser.branch_id }
+      ? { role: "staff", is_deleted: false, branch_id: actor.branch_id }
       : { role: "staff", is_deleted: false };
 
     const [totalBranches, activeCourts, totalStaff, monthlyRevenue] =

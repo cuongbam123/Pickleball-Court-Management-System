@@ -20,7 +20,7 @@ const RoleHomePage = () => {
     return <AdminHome />;
   }
 
-  if (user.role === "staff") {
+  if (user.role === "staff" || user.role === "manager") {
     return <StaffHome />;
   }
 

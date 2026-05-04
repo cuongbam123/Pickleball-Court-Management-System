@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 10000,
+  withCredentials: true,
 });
 
 let isRefreshing = false;
@@ -46,6 +47,12 @@ apiClient.interceptors.response.use(
       return Promise.reject({ message: "Network error" });
     }
 
+    // Không refresh cho chính request refresh để tránh lặp vô hạn
+    if (originalRequest?.url?.includes("/auth/refreshToken")) {
+      clearAuth();
+      return Promise.reject(error);
+    }
+
     // ❌ không phải 401
     if (error.response.status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
@@ -69,12 +76,18 @@ apiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
+      if (!refresh_token) throw new Error("Missing refresh token");
+
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/v1/auth/refreshToken`,
-        { refresh_token }
+        { refresh_token },
+        { withCredentials: true }
       );
 
-      const newToken = res?.data?.access_token;
+      const newToken =
+        res?.data?.data?.access_token ||
+        res?.data?.access_token ||
+        res?.data?.token;
 
       if (!newToken) throw new Error("Invalid refresh");
       

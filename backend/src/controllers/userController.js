@@ -2,6 +2,21 @@ const userService = require("../services/userService");
 const { runAutoRank } = require("../jobs/autoRankJob");
 
 class UserController {
+  // POST /users/staff
+  async createStaffAccount(req, res, next) {
+    try {
+      const result = await userService.createStaffAccount(req.body, req.user);
+
+      return res.status(201).json({
+        success: true,
+        message: result.message,
+        data: result.user,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   //gET /users
   async getUsers(req, res, next) {
     try {

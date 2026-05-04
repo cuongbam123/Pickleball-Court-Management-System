@@ -7,11 +7,13 @@ import Table from "../../components/ui/Table";
 import clsx from "clsx";
 import Modal from "../../components/ui/Modal";
 import SelectFilter from "../../components/ui/Filter";
+import { useAuthStore } from "../../store/authStore";
 
 const AdminUsersPage = () => {
   const { users, isLoading, fetchUsers } = useAdminUsers();
   const [viewMode, setViewMode] = useState("table");
   const {
+    branches,
     branchNames,
     handleDeleteUser,
     handleUpdateUser,
@@ -21,6 +23,10 @@ const AdminUsersPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [selectedRole, setSelectedRole] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState("desc");
+  const currentUser = useAuthStore((s) => s.user);
 
   const selectedUser = users.find((user) => user._id === userToUpdate) || null;
 
@@ -40,7 +46,12 @@ const AdminUsersPage = () => {
     if (result.success) {
       alert("Cập nhật thành công");
       setUserToUpdate(null);
-      fetchUsers();
+      fetchUsers({
+        role: selectedRole || undefined,
+        search: searchName || undefined,
+        sortBy,
+        sortOrder,
+      });
     } else {
       alert("Cập nhật thất bại");
     }
@@ -55,7 +66,12 @@ const AdminUsersPage = () => {
         elo_score: formData.elo_score,
       });
       if (rankUpdateResult.success) {
-        fetchUsers();
+        fetchUsers({
+          role: selectedRole || undefined,
+          search: searchName || undefined,
+          sortBy,
+          sortOrder,
+        });
       } else {
         alert("Cập nhật rank thất bại");
       }
@@ -70,7 +86,12 @@ const AdminUsersPage = () => {
     if (result.success) {
       alert("Xóa thành công");
       closeDeleteModal();
-      fetchUsers();
+      fetchUsers({
+        role: selectedRole || undefined,
+        search: searchName || undefined,
+        sortBy,
+        sortOrder,
+      });
     } else {
       alert("Xóa thất bại");
     }
@@ -78,14 +99,22 @@ const AdminUsersPage = () => {
 
   const handleRoleChange = (value) => {
     setSelectedRole(value);
+    fetchUsers({
+      role: value || undefined,
+      search: searchName || undefined,
+      sortBy,
+      sortOrder,
+    });
   };
 
-  const filteredUsers = users.filter((user) => {
-    if (selectedRole && user.role !== selectedRole) {
-      return false;
-    }
-    return true;
-  });
+  const handleSearchByName = () => {
+    fetchUsers({
+      role: selectedRole || undefined,
+      search: searchName || undefined,
+      sortBy,
+      sortOrder,
+    });
+  };
 
   const columns = [
     { header: "Tên", accessor: "full_name" },
@@ -105,15 +134,7 @@ const AdminUsersPage = () => {
     },
     {
       header: "Vai trò",
-      render: (user) => {
-        if (user.role === "admin") {
-          return "Admin";
-        } else if (user.role === "staff") {
-          return "Staff";
-        } else {
-          return "Customer"; // Hiển thị vai trò customer
-        }
-      },
+      render: (user) => user.role,
     },
     {
       header: "Thao tác",
@@ -254,10 +275,32 @@ const AdminUsersPage = () => {
           </div>
         </div>
         <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
+          <div className="w-72">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Tìm theo tên
+            </label>
+            <div className="flex gap-2">
+              <input
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                placeholder="Nhập tên người dùng..."
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleSearchByName}
+                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Tìm
+              </button>
+            </div>
+          </div>
+
           <SelectFilter
             label="Lọc theo vai trò"
             options={[
               { label: "Admin", value: "admin" },
+              { label: "Manager", value: "manager" },
               { label: "Staff", value: "staff" },
               { label: "Customer", value: "customer" },
             ]}
@@ -266,11 +309,49 @@ const AdminUsersPage = () => {
             placeholder="Tất cả vai trò"
             className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
+          <SelectFilter
+            label="Sắp xếp theo"
+            options={[
+              { label: "Mới nhất", value: "createdAt" },
+              { label: "Vai trò", value: "role" },
+              { label: "Rank kỹ năng", value: "skill_rank" },
+              { label: "Hạng thẻ thành viên", value: "loyalty_tier" },
+            ]}
+            value={sortBy}
+            onChange={(value) => {
+              setSortBy(value);
+              fetchUsers({
+                role: selectedRole || undefined,
+                search: searchName || undefined,
+                sortBy: value,
+                sortOrder,
+              });
+            }}
+            className="w-64"
+          />
+          <SelectFilter
+            label="Thứ tự"
+            options={[
+              { label: "Giảm dần", value: "desc" },
+              { label: "Tăng dần", value: "asc" },
+            ]}
+            value={sortOrder}
+            onChange={(value) => {
+              setSortOrder(value);
+              fetchUsers({
+                role: selectedRole || undefined,
+                search: searchName || undefined,
+                sortBy,
+                sortOrder: value,
+              });
+            }}
+            className="w-52"
+          />
         </div>
 
         <Table
           columns={columns}
-          data={filteredUsers}
+          data={users}
           loading={isLoading}
           rowKey="_id"
           viewMode={viewMode}
@@ -287,6 +368,8 @@ const AdminUsersPage = () => {
       >
         <AdminStaffForm
           user={selectedUser}
+          branches={branches}
+          currentActorRole={currentUser?.role || "admin"}
           onCancel={() => setUserToUpdate(null)}
           onSubmit={handleSubmitUpdate}
         />

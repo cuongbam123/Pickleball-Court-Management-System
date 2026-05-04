@@ -1,1 +1,64 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --pb-accent: #3b82f6;
+  --pb-accent-strong: #2563eb;
+  --pb-bg: #f3f6fb;
+  --pb-surface: #ffffff;
+  --pb-text: #0f172a;
+  --pb-muted: #64748b;
+  --pb-border: #e2e8f0;
+}
+
+body {
+  background: radial-gradient(circle at top right, #eef4ff 0%, #f5f8ff 34%, var(--pb-bg) 72%);
+  color: var(--pb-text);
+  transition: background 0.25s ease, color 0.25s ease;
+  color-scheme: light;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.dark body {
+  background: radial-gradient(circle at top right, #23291d 0%, #111827 30%, #020617 72%);
+  color: #e2e8f0;
+  color-scheme: dark;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes routeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.route-transition {
+  animation: routeIn 0.22s ease-out;
+}

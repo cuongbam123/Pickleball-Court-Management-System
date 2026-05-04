@@ -27,3 +27,8 @@ export const updateUserRank = (id, data) => {
 export const deleteUser = (id) => {
   return apiClient.delete(`/api/v1/users/${id}`);
 };
+
+// POST /users/staff
+export const createStaffAccount = (data) => {
+  return apiClient.post("/api/v1/users/staff", data);
+};
