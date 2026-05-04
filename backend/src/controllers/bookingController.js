@@ -107,11 +107,11 @@ const cancelBooking = async (req, res, next) => {
       success: true,
       message: "Hủy đặt sân thành công",
       data: {
-        _id: result._id,
-        status: result.status,
-        cancel_at: result.cancel_at,
-        refund_status: result.refund_status,
-        deposit_amount: result.deposit_amount,
+        _id: result.booking._id,
+        status: result.booking.status,
+        cancel_at: result.booking.cancel_at,
+        refund_status: result.booking.refund_status,
+        deposit_amount: result.booking.deposit_amount,
         refund_action: result.refund_action,
       },
     });

@@ -19,24 +19,39 @@ const User = require("../models/users");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 
 const getBookings = async (query, user) => {
-  const { branch_id, date, court_id, page = 1, limit = 100 } = query;
-
-  if (date === null || date === undefined) {
-    const date = new Date();
-  }
+  const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
+  
   const filter = {
     is_deleted: false,
-    status: { $ne: "cancelled" },
   };
+
+  if (date) {    
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    filter.start_time = {
+      $gte: startOfDay, 
+      $lte: endOfDay   
+    };
+  }
+  
+  if (user_id) { 
+  filter.user_id = user_id;
+}
 
   if (branch_id) {
     filter.branch_id = branch_id;
+  }
+  if (status){
+    filter.status = status;
   }
 
   if (court_id) {
     filter.court_id = court_id;
   }
-
   const skip = (page - 1) * limit;
 
   const [bookings, total_records] = await Promise.all([
@@ -275,7 +290,7 @@ const holdBooking = async (body, user) => {
   }
 
   const total_court_price = Math.round(totalPrice);
-  const deposit_amount = Math.round(total_court_price * 0.5);
+  let deposit_amount = Math.round(total_court_price * 0.5);
   const hold_token = crypto.randomUUID();
   const expires_at = new Date(Date.now() + 10 * 60 * 1000);
 
@@ -286,8 +301,9 @@ const holdBooking = async (body, user) => {
   let finalHoldToken = hold_token;
 
   if (user.role === "admin" || user.role === "staff") {
+    deposit_amount = 0;
     initialPaymentStatus = "deposit_paid";
-    initialDepositPaid = deposit_amount;
+    initialDepositPaid = 0;
     initialStatus = "deposited";
     finalHoldToken = null;
   }
@@ -330,7 +346,6 @@ const holdBooking = async (body, user) => {
         error.errorCode = "ERR_COURT_CONFLICT";
         throw error;
       }
-
       const createdDocs = await Booking.create(
         [
           {
@@ -346,6 +361,7 @@ const holdBooking = async (body, user) => {
             total_court_price,
             hold_token: finalHoldToken,
             hold_owner: user.userId,
+            expires_at: initialStatus === "holding" ? expires_at : null,
           },
         ],
         { session },
@@ -512,6 +528,7 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
 
       booking.status = "deposited";
       booking.hold_token = null;
+      booking.expires_at = null;
       booking.payment_method = "vnpay";
       await booking.save({ session });
 
@@ -738,6 +755,8 @@ const cancelBooking = async (bookingId, reason, user) => {
       booking.cancel_at = now;
       booking.refund_status = "refunded";
       booking.cancelled_by = user.userId;
+      booking.hold_token = null;
+      booking.expires_at = null;
       // trả sân
       if (
         now >= new Date(booking.start_time.getTime() - 30 * 60000) &&

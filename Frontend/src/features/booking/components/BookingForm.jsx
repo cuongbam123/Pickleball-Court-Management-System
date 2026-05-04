@@ -1,9 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../../store/authStore";
 import dayjs from "dayjs";
 import Button from "../../../components/ui/Button";
-import { createBooking, payBooking } from "../api/bookingApi";
+import { createBooking } from "../api/bookingApi";
+import {
+  clearPendingBookingDraft,
+  readPendingBookingDraft,
+  writePendingBookingDraft,
+} from "../constants/pendingBooking";
 
 const BookingForm = ({
   selectedSlots,
@@ -21,6 +26,9 @@ const BookingForm = ({
     price: "",
     note: "",
   });
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, access_token } = useAuthStore();
 
   // T4: Tự động fill thông tin khi có selectedSlots
   useEffect(() => {
@@ -35,6 +43,19 @@ const BookingForm = ({
     }
   }, [selectedSlots]);
 
+  useEffect(() => {
+    const draft = location.state?.restoreBookingDraft || readPendingBookingDraft();
+    if (!draft) return;
+
+    if (draft.formData) {
+      setFormData((prev) => ({
+        ...prev,
+        ...draft.formData,
+      }));
+    }
+    clearPendingBookingDraft();
+  }, [location.state]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -44,13 +65,9 @@ const BookingForm = ({
       ? `${selectedSlots[0].startTime} - ${selectedSlots[selectedSlots.length - 1].endTime}`
       : "";
   const durationHours = selectedSlots.length;
-
   const estimatedPrice = selectedSlots.reduce((total, slot) => {
     return total + (slot.pricePerHour || 0);
   }, 0);
-  const navigate = useNavigate();
-
-  const { user, access_token } = useAuthStore();
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -66,10 +83,50 @@ const BookingForm = ({
     }
 
     if (!user || !access_token) {
-      alert("Vui lòng đăng nhập để tiếp tục đặt sân!");
-      // Chuyển hướng sang trang login, có thể truyền thêm tham số redirect để login xong quay lại đây
-      navigate("/login?redirect=/booking");
-      return; // Dừng lại, không chạy code API bên dưới
+      const redirectPath =
+        `${location.pathname}${location.search}${location.hash}` || "/booking";
+
+      const normalizedSlots = selectedSlots.map((slot) => ({
+        courtId: slot.courtId,
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        userInfo: {
+          ...(slot.userInfo || {}),
+          name: formData.name || slot.userInfo?.name || "",
+          phone: formData.phone || slot.userInfo?.phone || "",
+          email: formData.email || slot.userInfo?.email || "",
+        },
+        pricePerHour: slot.pricePerHour || 0,
+      }));
+
+      writePendingBookingDraft({
+        returnUrl: redirectPath,
+        redirect: redirectPath,
+        selectedBranch,
+        selectedDate: dayjs(selectedDate).toISOString(),
+        selectedSlots: normalizedSlots,
+        bookingSummary: {
+          mergedTime,
+          durationHours,
+          estimatedPrice,
+          depositAmount: Math.round(estimatedPrice / 2),
+          courtId: normalizedSlots[0]?.courtId || "",
+        },
+        formData: {
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          note: formData.note,
+        },
+      });
+      navigate(`/login?returnUrl=${encodeURIComponent(redirectPath)}`, {
+        state: {
+          from: redirectPath,
+          returnUrl: redirectPath,
+          reason: "booking_requires_login",
+        },
+      });
+      return;
     }
 
     // 2. Tách giờ từ phần tử ĐẦU TIÊN và CUỐI CÙNG của mảng
@@ -101,7 +158,7 @@ const BookingForm = ({
       court_id: selectedSlots[0].courtId,
       start_time: startTime,
       end_time: endTime,
-      buffer_time: 0,
+      buffer_time: 10,
       booking_type: "standard",
       customer_info: {
         name: formData.name,
@@ -219,7 +276,6 @@ const BookingForm = ({
         >
           Đặt sân
         </Button>
-        submit
       </form>
     </div>
   );

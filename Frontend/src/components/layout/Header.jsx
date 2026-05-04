@@ -3,13 +3,16 @@ import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, ChevronDown, User } from "lucide-react";
 import Logo from "./Logo";
 import Button from "../ui/Button";
+import { useAuthStore } from "../../store/authStore";
 
-const Header = ({ user, onLogout }) => {
+const Header = ({ onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const userMenuRef = useRef(null);
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const userRole = user?.role;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -21,10 +24,22 @@ const Header = ({ user, onLogout }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+  const handleOpenAdminMenu = () => {
+    if (userRole === "admin" || userRole === "staff") {
+      setIsOpen(!isOpen);
+    } else {
+      alert("Bạn không có quyền truy cập khu vực này!");
+    }
+  };
 
   const handleGoProfile = () => {
     setIsUserMenuOpen(false);
     navigate("/profile");
+  };
+
+  const handleHistory = () => {
+    setIsUserMenuOpen(false);
+    navigate("/my-bookings");
   };
 
   const handleLogout = () => {
@@ -55,7 +70,7 @@ const Header = ({ user, onLogout }) => {
               Trang chủ
             </Link>
             <Link
-              to="/booking"
+              to={userRole === "staff" ? "/staff/booking" : "/booking"}
               className="text-sm font-medium text-slate-700 hover:text-emerald-600"
             >
               Đặt sân
@@ -136,7 +151,13 @@ const Header = ({ user, onLogout }) => {
                       <User size={16} />
                       Thông tin cá nhân
                     </button>
-
+                    <button 
+                      type="button"
+                      onClick={handleHistory}
+                      className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    >
+                      Lịch sử đặt sân
+                    </button>
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -202,7 +223,7 @@ const Header = ({ user, onLogout }) => {
               Trang chủ
             </Link>
             <Link
-              to="/booking"
+              to={userRole === "staff" ? "/staff/booking" : "/booking"}
               onClick={() => setIsOpen(false)}
               className="rounded-xl px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-emerald-600"
             >

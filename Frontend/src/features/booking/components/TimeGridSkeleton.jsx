@@ -2,7 +2,7 @@ import React from "react";
 
 const TimeGridSkeleton = () => {
   // Giả lập 5 sân, mỗi sân 15 slot giờ (từ 5h đến 20h)
-  const dummyCourts = Array.from({ length: 0 });
+  const dummyCourts = Array.from({ length: 5 });
   const dummySlots = Array.from({ length: 24 });
 
   return (
