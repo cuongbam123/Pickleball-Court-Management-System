@@ -82,7 +82,7 @@ import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import Logo from "./Logo";
 import clsx from "clsx";
-import { ChevronLeft, ChevronRight, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 
 const Sidebar = ({
   items = [],
@@ -134,7 +134,7 @@ const Sidebar = ({
                 "mb-1.5 flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 collapsed ? "justify-center gap-0" : "gap-2",
                 isActive
-                  ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:ring-blue-400/20"
+                  ? "bg-blue-50/90 text-blue-700 shadow-sm ring-1 ring-blue-100 dark:bg-blue-500/20 dark:text-blue-200 dark:ring-blue-400/20"
                   : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
               )}
               title={collapsed ? item.label : undefined}
@@ -155,16 +155,28 @@ const Sidebar = ({
         <button
           type="button"
           onClick={onToggleTheme}
-          className="mb-2 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+          className="mb-2 flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-blue-50 hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
           title={isDarkMode ? "Chuyển sang Light mode" : "Chuyển sang Dark mode"}
         >
-          {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-          {!collapsed ? (isDarkMode ? "Light mode" : "Dark mode") : null}
+          {!collapsed ? "Dark mode" : null}
+          <span
+            className={clsx(
+              "relative inline-flex h-6 w-11 rounded-full transition",
+              isDarkMode ? "bg-blue-600" : "bg-slate-300",
+            )}
+          >
+            <span
+              className={clsx(
+                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition",
+                isDarkMode ? "left-[22px]" : "left-0.5",
+              )}
+            />
+          </span>
         </button>
         <button
           type="button"
           onClick={() => navigate("/logout")}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-900/20"
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-rose-600 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-rose-300"
           title="Đăng xuất"
         >
           <LogOut size={16} />

@@ -7,6 +7,7 @@ import AdminStaffForm from "../../features/auth/components/UpdateForm";
 import Modal from "../../components/ui/Modal";
 import clsx from "clsx";
 import { useAuthStore } from "../../store/authStore";
+import { Filter, Pencil, Plus, Search, Trash2 } from "lucide-react";
 
 const getBranchId = (branch) => {
   if (!branch) return null;
@@ -33,6 +34,9 @@ const AdminStaffPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [branchDraft, setBranchDraft] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [appliedSearchName, setAppliedSearchName] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({
     full_name: "",
@@ -92,7 +96,12 @@ const AdminStaffPage = () => {
     }
   };
   const handleBranchChange = (value) => {
-    setSelectedBranch(value);
+    setBranchDraft(value);
+  };
+
+  const handleApplyFilters = () => {
+    setSelectedBranch(branchDraft);
+    setAppliedSearchName(searchName.trim().toLowerCase());
   };
 
   const handleCreateSubmit = async (e) => {
@@ -124,6 +133,12 @@ const AdminStaffPage = () => {
         return false;
       }
     }
+    if (appliedSearchName) {
+      const candidate = `${user.full_name || ""} ${user.email || ""} ${user.phone || ""}`.toLowerCase();
+      if (!candidate.includes(appliedSearchName)) {
+        return false;
+      }
+    }
     return true;
   });
 
@@ -133,7 +148,7 @@ const AdminStaffPage = () => {
     { header: "Số điện thoại", accessor: "phone" },
     {
       header: "Chi nhánh",
-      render: (item) => branchNames[item.branch_id] || "Không xác định",
+      render: (item) => getBranchName(item),
     },
     {
       header: "Vai trò",
@@ -142,21 +157,31 @@ const AdminStaffPage = () => {
     {
       header: "Thao tác",
       render: (item) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setUserToUpdate(item._id)}
-            className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-100"
-          >
-            Chỉnh sửa
-          </button>
-          <button
-            type="button"
-            onClick={() => openDeleteModal(item._id)}
-            className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
-          >
-            Xóa
-          </button>
+        <div className="flex items-center justify-end gap-3">
+          <div className="group/edit relative">
+            <button
+              type="button"
+              onClick={() => setUserToUpdate(item._id)}
+              className="cursor-pointer text-emerald-600 opacity-80 transition-all hover:opacity-100"
+            >
+              <Pencil size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/edit:block">
+              Chỉnh sửa nhân viên
+            </span>
+          </div>
+          <div className="group/delete relative">
+            <button
+              type="button"
+              onClick={() => openDeleteModal(item._id)}
+              className="cursor-pointer text-rose-500 opacity-80 transition-all hover:opacity-100"
+            >
+              <Trash2 size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/delete:block">
+              Xóa nhân viên
+            </span>
+          </div>
         </div>
       ),
     },
@@ -210,27 +235,30 @@ const AdminStaffPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-7">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Quản lý Staff</h1>
-            <p className="text-sm text-slate-500">Danh sách các nhân viên</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Quản lý Nhân viên
+            </h1>
+            <p className="mt-1 text-sm text-slate-500">Danh sách các nhân viên</p>
           </div>
 
           <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="inline-flex cursor-pointer items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
             >
-              + Tạo nhân viên
+              <Plus size={16} className="mr-1" />
+              Tạo nhân viên
             </button>
             <div className="flex items-center rounded-lg border bg-white p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
                 className={clsx(
-                  "rounded-md p-2 transition-colors",
+                  "cursor-pointer rounded-md p-2 transition-colors",
                   viewMode === "table"
                     ? "bg-slate-100 text-blue-600"
                     : "text-slate-400 hover:text-slate-600",
@@ -257,7 +285,7 @@ const AdminStaffPage = () => {
                 type="button"
                 onClick={() => setViewMode("grid")}
                 className={clsx(
-                  "rounded-md p-2 transition-colors",
+                  "cursor-pointer rounded-md p-2 transition-colors",
                   viewMode === "grid"
                     ? "bg-slate-100 text-blue-600"
                     : "text-slate-400 hover:text-slate-600",
@@ -282,18 +310,43 @@ const AdminStaffPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
-        <SelectFilter
-          label="Lọc theo chi nhánh"
-          options={Object.entries(branchNames).map(([id, name]) => ({
-            value: id,
-            label: name,
-          }))}
-          value={selectedBranch}
-          onChange={handleBranchChange}
-          className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm hover:shadow-md transition-shadow"
-          placeholder="Tất cả chi nhánh"
-        />
+        <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="min-w-[240px] flex-1">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Tìm theo tên
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                placeholder="Tìm theo tên"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+          <SelectFilter
+            label="Lọc theo chi nhánh"
+            options={Object.entries(branchNames).map(([id, name]) => ({
+              value: id,
+              label: name,
+            }))}
+            value={branchDraft}
+            onChange={handleBranchChange}
+            className="min-w-[220px] flex-1"
+            placeholder="Tất cả chi nhánh"
+          />
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-[0.98]"
+          >
+            <Filter size={16} />
+            Lọc
+          </button>
         </div>
 
         <Table

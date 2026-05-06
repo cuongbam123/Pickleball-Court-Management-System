@@ -8,6 +8,7 @@ import clsx from "clsx";
 import Modal from "../../components/ui/Modal";
 import SelectFilter from "../../components/ui/Filter";
 import { useAuthStore } from "../../store/authStore";
+import { Filter, Pencil, Search, Trash2 } from "lucide-react";
 
 const AdminUsersPage = () => {
   const { users, isLoading, fetchUsers } = useAdminUsers();
@@ -116,6 +117,10 @@ const AdminUsersPage = () => {
     });
   };
 
+  const handleApplyFilters = () => {
+    handleSearchByName();
+  };
+
   const columns = [
     { header: "Tên", accessor: "full_name" },
     { header: "Email", accessor: "email" },
@@ -139,21 +144,33 @@ const AdminUsersPage = () => {
     {
       header: "Thao tác",
       render: (item) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setUserToUpdate(item._id)}
-            className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-100"
-          >
-            Chỉnh sửa
-          </button>
-          <button
-            type="button"
-            onClick={() => openDeleteModal(item._id)}
-            className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
-          >
-            Xóa
-          </button>
+        <div className="flex items-center justify-end gap-3">
+          <div className="group/edit relative">
+            <button
+              type="button"
+              onClick={() => setUserToUpdate(item._id)}
+              className="cursor-pointer text-emerald-600 opacity-80 transition-all hover:opacity-100"
+              title="Chỉnh sửa"
+            >
+              <Pencil size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/edit:block">
+              Chỉnh sửa người dùng
+            </span>
+          </div>
+          <div className="group/delete relative">
+            <button
+              type="button"
+              onClick={() => openDeleteModal(item._id)}
+              className="cursor-pointer text-rose-500 opacity-80 transition-all hover:opacity-100"
+              title="Xóa"
+            >
+              <Trash2 size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/delete:block">
+              Xóa người dùng
+            </span>
+          </div>
         </div>
       ),
     },
@@ -207,24 +224,26 @@ const AdminUsersPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-7">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
               Quản lý Người dùng
             </h1>
-            <p className="text-sm text-slate-500">Danh sách các người dùng</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Danh sách các người dùng và vai trò
+            </p>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center rounded-lg border bg-white p-1 shadow-sm">
+            <div className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               <button
                 type="button"
                 onClick={() => setViewMode("table")}
                 className={clsx(
-                  "rounded-md p-2 transition-colors",
+                  "cursor-pointer rounded-lg p-2 transition-colors",
                   viewMode === "table"
-                    ? "bg-slate-100 text-blue-600"
+                    ? "bg-blue-50 text-blue-600"
                     : "text-slate-400 hover:text-slate-600",
                 )}
                 title="Dạng bảng"
@@ -249,9 +268,9 @@ const AdminUsersPage = () => {
                 type="button"
                 onClick={() => setViewMode("grid")}
                 className={clsx(
-                  "rounded-md p-2 transition-colors",
+                  "cursor-pointer rounded-lg p-2 transition-colors",
                   viewMode === "grid"
-                    ? "bg-slate-100 text-blue-600"
+                    ? "bg-blue-50 text-blue-600"
                     : "text-slate-400 hover:text-slate-600",
                 )}
                 title="Dạng lưới"
@@ -274,25 +293,22 @@ const AdminUsersPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
-          <div className="w-72">
+        <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+          <div className="min-w-[240px] flex-1">
             <label className="mb-1 block text-sm font-medium text-slate-700">
               Tìm theo tên
             </label>
-            <div className="flex gap-2">
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
                 value={searchName}
                 onChange={(e) => setSearchName(e.target.value)}
-                placeholder="Nhập tên người dùng..."
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                placeholder="Tìm theo tên"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
               />
-              <button
-                type="button"
-                onClick={handleSearchByName}
-                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Tìm
-              </button>
             </div>
           </div>
 
@@ -307,7 +323,7 @@ const AdminUsersPage = () => {
             value={selectedRole}
             onChange={handleRoleChange}
             placeholder="Tất cả vai trò"
-            className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            className="min-w-[200px] flex-1"
           />
           <SelectFilter
             label="Sắp xếp theo"
@@ -327,7 +343,7 @@ const AdminUsersPage = () => {
                 sortOrder,
               });
             }}
-            className="w-64"
+            className="min-w-[180px] flex-1"
           />
           <SelectFilter
             label="Thứ tự"
@@ -345,8 +361,16 @@ const AdminUsersPage = () => {
                 sortOrder: value,
               });
             }}
-            className="w-52"
+            className="min-w-[160px] flex-1"
           />
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-[0.98]"
+          >
+            <Filter size={16} />
+            Lọc
+          </button>
         </div>
 
         <Table

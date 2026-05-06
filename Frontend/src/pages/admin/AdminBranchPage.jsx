@@ -2,11 +2,10 @@
 import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import Table from "../../components/ui/Table"; // Sử dụng component Table của bạn
-import Button from "../../components/ui/Button"; // Sử dụng component Button của bạn
 import { useBranches } from "../../features/facility/hooks/useBranches";
 import BranchModal from "../../features/facility/components/BranchModal";
 import clsx from "clsx";
-import { LayoutGrid, Table2 } from "lucide-react";
+import { Filter, LayoutGrid, Pencil, Plus, Search, Table2, Trash2 } from "lucide-react";
 
 const AdminBranchPage = () => {
   const { branches, isLoading, deleteBranch, createBranch, updateBranch } =
@@ -15,36 +14,80 @@ const AdminBranchPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBranch, setEditingBranch] = useState(null);
   const [viewMode, setViewMode] = useState("table");
+  const [searchDraft, setSearchDraft] = useState("");
+  const [appliedSearch, setAppliedSearch] = useState("");
+
+  const handleApplyFilters = () => {
+    setAppliedSearch(searchDraft.trim().toLowerCase());
+  };
   // Định nghĩa các cột cho Table component
   const columns = [
-    { header: "Tên chi nhánh", accessor: "name" },
-    { header: "Địa chỉ", accessor: "address" },
-    { header: "Hotline", accessor: "hotline" },
+    {
+      header: "Tên chi nhánh",
+      accessor: "name",
+      headerClassName: "w-[20%]",
+      cellClassName: "whitespace-normal break-words",
+    },
+    {
+      header: "Địa chỉ",
+      accessor: "address",
+      headerClassName: "w-[36%]",
+      cellClassName: "whitespace-normal break-words",
+    },
+    {
+      header: "Hotline",
+      accessor: "hotline",
+      headerClassName: "w-[16%]",
+      cellClassName: "whitespace-nowrap",
+    },
     {
       header: "Giờ hoạt động",
+      headerClassName: "w-[16%] whitespace-nowrap",
+      cellClassName: "whitespace-nowrap",
       render: (item) => `${item.open_time} - ${item.close_time}`,
     },
     {
       header: "Thao tác",
+      headerClassName: "w-28 text-right",
+      cellClassName: "w-28",
       render: (item) => (
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleOpenEdit(item)}
-            className="rounded-lg px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
-          >
-            Sửa
-          </button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => deleteBranch(item._id)}
-          >
-            Xóa
-          </Button>
+        <div className="flex items-center justify-end gap-3">
+          <div className="group/edit relative">
+            <button
+              type="button"
+              onClick={() => handleOpenEdit(item)}
+              className="cursor-pointer text-emerald-600 opacity-80 transition-all hover:opacity-100"
+            >
+              <Pencil size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/edit:block">
+              Chỉnh sửa chi nhánh
+            </span>
+          </div>
+          <div className="group/delete relative">
+            <button
+              type="button"
+              onClick={() => deleteBranch(item._id)}
+              className="cursor-pointer text-rose-500 opacity-80 transition-all hover:opacity-100"
+            >
+              <Trash2 size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/delete:block">
+              Xóa chi nhánh
+            </span>
+          </div>
         </div>
       ),
     },
   ];
+
+  const filteredBranches = branches.filter((branch) =>
+    appliedSearch
+      ? `${branch.name} ${branch.address} ${branch.hotline}`
+          .toLowerCase()
+          .includes(appliedSearch)
+      : true,
+  );
 
   const renderBranchCard = (branch) => (
     <div className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
@@ -107,14 +150,14 @@ const AdminBranchPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-7">
         {/* Header & View Toggle */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Quản lý chi nhánh
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               Danh sách các cơ sở trên hệ thống
             </p>
           </div>
@@ -125,7 +168,7 @@ const AdminBranchPage = () => {
               <button
                 onClick={() => setViewMode("table")}
                 className={clsx(
-                  "rounded-lg p-2 transition-colors",
+                  "cursor-pointer rounded-lg p-2 transition-colors",
                   viewMode === "table"
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
@@ -137,7 +180,7 @@ const AdminBranchPage = () => {
               <button
                 onClick={() => setViewMode("grid")}
                 className={clsx(
-                  "rounded-lg p-2 transition-colors",
+                  "cursor-pointer rounded-lg p-2 transition-colors",
                   viewMode === "grid"
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
@@ -150,17 +193,45 @@ const AdminBranchPage = () => {
 
             <button
               onClick={handleOpenAdd}
-              className="rounded-xl bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+              className="inline-flex cursor-pointer items-center rounded-xl bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
             >
-              + Thêm chi nhánh
+              <Plus size={16} className="mr-1" />
+              Thêm chi nhánh
             </button>
           </div>
         </div>
 
-        {/* Gọi Component Table đã nâng cấp */}
+        <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="min-w-[260px] flex-1">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+              Tìm theo tên/địa chỉ
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                placeholder="Tìm theo tên/địa chỉ/hotline"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-[0.98]"
+          >
+            <Filter size={16} />
+            Lọc
+          </button>
+        </div>
+
         <Table
           columns={columns}
-          data={branches}
+          data={filteredBranches}
           loading={isLoading}
           rowKey="_id"
           // Props điều khiển View

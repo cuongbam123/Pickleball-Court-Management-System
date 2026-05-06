@@ -6,10 +6,21 @@ import SelectFilter from "../../components/ui/Filter";
 import CourtModal from "../../features/facility/components/CourtModal";
 import { useCourts } from "../../features/facility/hooks/useCourts";
 import clsx from "clsx";
-import { LayoutGrid, Table2 } from "lucide-react";
+import {
+  Filter,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Search,
+  Table2,
+  Trash2,
+} from "lucide-react";
 
 const AdminCourtPage = () => {
   const [selectedBranchFilter, setSelectedBranchFilter] = useState("");
+  const [branchDraftFilter, setBranchDraftFilter] = useState("");
+  const [searchName, setSearchName] = useState("");
+  const [appliedSearchName, setAppliedSearchName] = useState("");
   const {
     courts,
     branches,
@@ -25,6 +36,11 @@ const AdminCourtPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState(null);
   const [viewMode, setViewMode] = useState("table");
+
+  const handleApplyFilters = () => {
+    setSelectedBranchFilter(branchDraftFilter);
+    setAppliedSearchName(searchName.trim().toLowerCase());
+  };
 
   const handleOpenAdd = () => {
     setEditingCourt(null);
@@ -67,7 +83,9 @@ const AdminCourtPage = () => {
             "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
             item.tagStatus === "available"
               ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-              : "bg-amber-100 text-amber-700",
+              : item.tagStatus === "playing"
+                ? "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200"
+                : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200",
           )}
         >
           {item.tagStatus}
@@ -94,19 +112,31 @@ const AdminCourtPage = () => {
     {
       title: "Thao tác",
       render: (item) => (
-        <div className="flex gap-3">
-          <button
-            onClick={() => handleOpenEdit(item)}
-            className="text-sm font-medium text-slate-700 transition hover:text-slate-900"
-          >
-            Sửa
-          </button>
-          <button
-            onClick={() => deleteCourt(item._id)}
-            className="text-sm font-medium text-rose-600 transition hover:text-rose-700"
-          >
-            Xóa
-          </button>
+        <div className="flex items-center justify-end gap-3">
+          <div className="group/edit relative">
+            <button
+              type="button"
+              onClick={() => handleOpenEdit(item)}
+              className="cursor-pointer text-emerald-600 opacity-80 transition-all hover:opacity-100"
+            >
+              <Pencil size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/edit:block">
+              Chỉnh sửa sân
+            </span>
+          </div>
+          <div className="group/delete relative">
+            <button
+              type="button"
+              onClick={() => deleteCourt(item._id)}
+              className="cursor-pointer text-rose-500 opacity-80 transition-all hover:opacity-100"
+            >
+              <Trash2 size={16} />
+            </button>
+            <span className="pointer-events-none absolute -top-10 right-0 z-10 hidden whitespace-nowrap rounded-lg bg-black px-2.5 py-1 text-xs text-white shadow-lg group-hover/delete:block">
+              Xóa sân
+            </span>
+          </div>
         </div>
       ),
     },
@@ -166,18 +196,21 @@ const AdminCourtPage = () => {
     </div>
   );
 
-  // Chuyển branches thành format cho SelectFilter
-  const branchOptions = branches.map((b) => ({ label: b.name, value: b._id }));
+  const filteredCourts = courts.filter((court) =>
+    appliedSearchName
+      ? court.name?.toLowerCase().includes(appliedSearchName)
+      : true,
+  );
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-7">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               Quản lý sân bãi
             </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
               Hiển thị tất cả {courts.length} sân trên hệ thống
             </p>
           </div>
@@ -185,7 +218,7 @@ const AdminCourtPage = () => {
             <button
               onClick={() => setViewMode("table")}
               className={clsx(
-                "rounded-lg p-2 transition-colors",
+                "cursor-pointer rounded-lg p-2 transition-colors",
                 viewMode === "table"
                   ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
@@ -197,7 +230,7 @@ const AdminCourtPage = () => {
             <button
               onClick={() => setViewMode("grid")}
               className={clsx(
-                "rounded-lg p-2 transition-colors",
+                "cursor-pointer rounded-lg p-2 transition-colors",
                 viewMode === "grid"
                   ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200"
                   : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
@@ -209,27 +242,52 @@ const AdminCourtPage = () => {
           </div>
           <button
             onClick={handleOpenAdd}
-            className="whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
+            className="inline-flex cursor-pointer whitespace-nowrap rounded-xl bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700"
           >
-            + Thêm sân mới
+            <Plus size={16} className="mr-1" />
+            Thêm sân mới
           </button>
         </div>
 
-        {/* BỘ LỌC CÁC THỨ */}
-        <div className="flex items-end gap-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex flex-wrap items-end gap-4 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <div className="min-w-[240px] flex-1">
+            <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+              Tìm theo tên sân
+            </label>
+            <div className="relative">
+              <Search
+                size={16}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                placeholder="Tìm theo tên sân"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+          </div>
           <SelectFilter
             label="Lọc theo chi nhánh"
             options={branches.map((b) => ({ label: b.name, value: b._id }))}
-            value={selectedBranchFilter}
-            onChange={setSelectedBranchFilter}
+            value={branchDraftFilter}
+            onChange={setBranchDraftFilter}
             placeholder="Tất cả chi nhánh"
-            className="w-64"
+            className="min-w-[220px] flex-1"
           />
+          <button
+            type="button"
+            onClick={handleApplyFilters}
+            className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-blue-500 hover:shadow-md hover:shadow-blue-200/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 active:scale-[0.98]"
+          >
+            <Filter size={16} />
+            Lọc
+          </button>
         </div>
 
         <Table 
           columns={columns} 
-          data={courts} 
+          data={filteredCourts} 
           loading={isLoading} 
           rowKey="_id"
           viewMode={viewMode}

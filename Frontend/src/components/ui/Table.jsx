@@ -68,14 +68,14 @@ export default function Table({
   return (
     <div
       className={clsx(
-        "overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900",
+        "overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900",
         className
       )}
     >
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           {/* HEADER */}
-          <thead className="bg-slate-100/80 dark:bg-slate-800">
+          <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
               {selectable && (
                 <th className="px-4 py-3">
@@ -91,7 +91,10 @@ export default function Table({
               {columns.map((col, index) => (
                 <th
                   key={col.key || col.accessor || index}
-                  className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 whitespace-nowrap dark:text-slate-300"
+                  className={clsx(
+                    "px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300",
+                    col.headerClassName,
+                  )}
                 >
                   {col.title || col.header}
                 </th>
@@ -109,10 +112,10 @@ export default function Table({
                   key={row[rowKey] || rowIndex}
                   onClick={() => onRowClick?.(row)}
                   className={clsx(
-                    "border-t border-slate-200 transition-colors duration-150 dark:border-slate-700",
+                    "border-t border-slate-100 transition-colors duration-150 dark:border-slate-700",
                     onRowClick && "cursor-pointer",
-                    "hover:bg-lime-50/40 dark:hover:bg-slate-800/70",
-                    isSelected && "bg-lime-50 dark:bg-lime-500/10"
+                    "hover:bg-slate-50 dark:hover:bg-slate-800/70",
+                    isSelected && "bg-blue-50/70 dark:bg-blue-500/10"
                   )}
                 >
                   {selectable && (
@@ -134,7 +137,10 @@ export default function Table({
                     return (
                       <td
                         key={dataKey || colIndex}
-                        className="px-4 py-3.5 text-slate-700 dark:text-slate-200"
+                        className={clsx(
+                          "px-4 py-4 align-top text-slate-700 dark:text-slate-200",
+                          col.cellClassName,
+                        )}
                       >
                         {col.render
                           ? col.render(row, rowIndex)
