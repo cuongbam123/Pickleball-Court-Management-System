@@ -36,11 +36,14 @@ const createTournamentValidation = {
         "date.greater": "start_day_ongoing must be after start_date",
         "any.required": "start_day_ongoing is required",
       }),
-    end_date: Joi.date().greater(Joi.ref("start_day_ongoing")).required().messages({
-      "date.base": "Ngay ket thuc phai la mot ngay hop le",
-      "date.greater": "Ngay ket thuc phai sau start_day_ongoing",
-      "any.required": "Ngay ket thuc la bat buoc",
-    }),
+    end_date: Joi.date()
+      .greater(Joi.ref("start_day_ongoing"))
+      .required()
+      .messages({
+        "date.base": "Ngay ket thuc phai la mot ngay hop le",
+        "date.greater": "Ngay ket thuc phai sau start_day_ongoing",
+        "any.required": "Ngay ket thuc la bat buoc",
+      }),
     branch_id: Joi.string().required().messages({
       "string.base": "Chi nhanh la bat buoc",
       "any.required": "Chi nhanh (branch_id) la bat buoc",
@@ -89,9 +92,74 @@ const updateStatusValidation = Joi.object({
     }),
 });
 
+const updateTournamentValidation = {
+  body: Joi.object({
+    name: Joi.string().min(3).max(255),
+
+    required_rank: Joi.string().valid("D", "C", "B", "A"),
+
+    max_participants: Joi.number().integer().min(2).max(10000),
+
+    entry_fee: Joi.number().min(0),
+
+    start_date: Joi.date().greater("now"),
+
+    start_day_ongoing: Joi.date().when("start_date", {
+      is: Joi.exist(),
+      then: Joi.date().greater(Joi.ref("start_date")),
+    }),
+
+    end_date: Joi.date().when("start_day_ongoing", {
+      is: Joi.exist(),
+      then: Joi.date().greater(Joi.ref("start_day_ongoing")),
+    }),
+
+    branch_id: Joi.string().length(24).hex(),
+  }).unknown(false),
+};
+const deleteTournamentValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "ID giải đấu không đúng định dạng hợp lệ",
+        "any.required": "ID giải đấu là bắt buộc",
+      }),
+  }),
+};
+const registerForTournamentValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "ID không hợp lệ",
+        "any.required": "ID là bắt buộc",
+      }),
+  }),
+};
+const getParticipantsValidation = {
+  query: Joi.object({
+    page: Joi.number().integer().min(1).default(1),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    search: Joi.string().trim().allow("", null),
+    payment_status: Joi.string().valid("pending", "paid").messages({
+      "any.only": "Trạng thái thanh toán không hợp lệ",
+    }),
+    result: Joi.string().valid("winner", "runner_up", "participant").messages({
+      "any.only": "Kết quả không hợp lệ",
+    }),
+  }).unknown(true),
+};
+
 module.exports = {
   createTournamentValidation,
   getTournamentValidation,
   getTournamentDetailValidation,
+  registerForTournamentValidation,
+  getParticipantsValidation,
+  deleteTournamentValidation,
   updateStatusValidation,
+  updateTournamentValidation,
 };

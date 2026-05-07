@@ -68,9 +68,80 @@ const updateTournamentStatus = async (req,res)=>{
     });
   }
 }
+//PUT(ADMIN)
+const updateTournament = async (req,res)=>{
+  try {
+    const {id} = req.params;
+    const updates = req.body;
+    const updatedTournament = await tournamentService.updateTournament(id, updates, req.user);
+    return res.status(200).json({
+      success: true,
+      message: "Cập nhật giải đấu thành công",
+      data: updatedTournament,
+    })
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+//DELETE(ADMIN)
+const deleteTournament = async (req,res)=>{
+  try{
+    const {id} = req.params;
+    await tournamentService.deleteTournament(id, req.user);
+    return res.status(200).json({
+      success: true,
+      message: "Xóa giải đấu thành công",
+    })
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+}
+//POST: Register for tournament
+const registerForTournament = async (req,res)=>{
+  try {
+    const {id} = req.params;
+    await tournamentService.registerForTournament(id, req.user);
+    return res.status(200).json({
+      success: true,
+      message: "Đăng ký giải đấu thành công",
+    })
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  } 
+}
+const getParticipants = async (req,res)=>{
+  try {
+    const {id} = req.params;
+    const {participants, meta} = await tournamentService.getParticipants(id, req.query);
+    return res.status(200).json({
+      success: true,
+      message: "Danh sách người tham gia giải đấu",
+      data: participants,
+      meta,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   createNewTournament,
   getTournaments,
   getTournamentId,
+  deleteTournament,
+  registerForTournament,
   updateTournamentStatus,
+  updateTournament,
+  getParticipants,
 };
