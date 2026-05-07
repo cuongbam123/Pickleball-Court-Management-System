@@ -1,0 +1,44 @@
+{
+  "id": "5f59b3f6-2a85-4b2d-aa96-f6e1b34a61a2",
+  "name": "Local Backend - Tournament Brackets",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "enabled": true
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@example.com",
+      "enabled": true
+    },
+    {
+      "key": "admin_password",
+      "value": "123456",
+      "enabled": true
+    },
+    {
+      "key": "admin_access_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJiYzM0MzhkMmJhYzE5MGNjMmZhYjciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzgxNDM5MzgsImV4cCI6MTc3ODE0NTczOH0.yw_6hLr5PnBjC1MjK198SZ_AnjCy89OU98cDq_kAswA",
+      "enabled": true
+    },
+    {
+      "key": "group_size",
+      "value": "4",
+      "enabled": true
+    },
+    {
+      "key": "tournament_id_not_close",
+      "value": "69fc52c116a2446c0bc2f9f0",
+      "enabled": true
+    },
+    {
+      "key": "tournament_id_close_registration",
+      "value": "69fc52c116a2446c0bc2f9f4",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-05-07T08:25:00.000Z",
+  "_postman_exported_using": "Cursor"
+}

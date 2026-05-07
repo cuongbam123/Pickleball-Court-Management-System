@@ -1,0 +1,344 @@
+{
+  "info": {
+    "_postman_id": "d7f8e09f-4ad9-4c84-9ce3-1d620d0d5d7a",
+    "name": "Tournaments - Generate Brackets",
+    "description": "Bo test case cho API tao bang dau tu dong",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1) Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Login status is 200\", function () {",
+              "  pm.expect([200, 401]).to.include(pm.response.code);",
+              "});",
+              "",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Login response has token when success\", function () {",
+              "  if (pm.response.code === 200) {",
+              "    pm.expect(jsonData).to.have.property(\"success\", true);",
+              "    pm.expect(jsonData.data).to.have.property(\"access_token\");",
+              "  } else {",
+              "    pm.expect(jsonData).to.have.property(\"success\", false);",
+              "  }",
+              "});",
+              "",
+              "if (pm.response.code === 200 && jsonData.data && jsonData.data.access_token) {",
+              "  pm.environment.set(\"admin_access_token\", jsonData.data.access_token);",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Generate Brackets - Unauthorized",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"group_size\": 4\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/tournaments/{{tournament_id_not_close}}/brackets/generate",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tournaments",
+            "{{tournament_id_not_close}}",
+            "brackets",
+            "generate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Unauthorized returns 401 or 403\", function () {",
+              "  pm.expect([401, 403]).to.include(pm.response.code);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) Generate Brackets - Invalid Tournament ID",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"group_size\": 4\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/tournaments/invalid-id/brackets/generate",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tournaments",
+            "invalid-id",
+            "brackets",
+            "generate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Invalid id returns 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4) Generate Brackets - Status Not close_registration",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"group_size\": 4\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/tournaments/{{tournament_id_not_close}}/brackets/generate",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tournaments",
+            "{{tournament_id_not_close}}",
+            "brackets",
+            "generate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Wrong status returns 400\", function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Message explains close_registration rule\", function () {",
+              "  pm.expect(jsonData.message || \"\").to.include(\"close_registration\");",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5) Generate Brackets - Success",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"group_size\": {{group_size}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/v1/tournaments/{{tournament_id_close_registration}}/brackets/generate",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tournaments",
+            "{{tournament_id_close_registration}}",
+            "brackets",
+            "generate"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Success returns 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Response has brackets array\", function () {",
+              "  pm.expect(jsonData.success).to.eql(true);",
+              "  pm.expect(jsonData.data).to.be.an(\"array\");",
+              "  pm.expect(jsonData.data.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test(\"Each bracket has expected fields\", function () {",
+              "  (jsonData.data || []).forEach((bracket) => {",
+              "    pm.expect(bracket).to.have.property(\"name\");",
+              "    pm.expect(bracket).to.have.property(\"participants\");",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6) Get Brackets - Success",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{admin_access_token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/tournaments/{{tournament_id_close_registration}}/brackets",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "tournaments",
+            "{{tournament_id_close_registration}}",
+            "brackets"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Get brackets returns 200\", function () {",
+              "  pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const jsonData = pm.response.json();",
+              "pm.test(\"Get brackets has populated participants\", function () {",
+              "  pm.expect(jsonData.success).to.eql(true);",
+              "  pm.expect(jsonData.data).to.be.an(\"array\");",
+              "  pm.expect(jsonData.data.length).to.be.greaterThan(0);",
+              "  (jsonData.data || []).forEach((bracket) => {",
+              "    pm.expect(bracket).to.have.property(\"participants\");",
+              "    (bracket.participants || []).forEach((player) => {",
+              "      pm.expect(player).to.have.property(\"full_name\");",
+              "      pm.expect(player).to.have.property(\"elo_score\");",
+              "      pm.expect(player).to.have.property(\"skill_rank\");",
+              "    });",
+              "  });",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -135,6 +135,47 @@ const getParticipants = async (req,res)=>{
     });
   }
 };
+
+const generateBrackets = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { group_size } = req.body;
+    const brackets = await tournamentService.generateBrackets(
+      id,
+      group_size,
+      req.user,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Tạo bảng đấu thành công",
+      data: brackets,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const getTournamentBrackets = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const brackets = await tournamentService.getBrackets(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Danh sách bảng đấu",
+      data: brackets,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   createNewTournament,
   getTournaments,
@@ -144,4 +185,6 @@ module.exports = {
   updateTournamentStatus,
   updateTournament,
   getParticipants,
+  generateBrackets,
+  getTournamentBrackets,
 };

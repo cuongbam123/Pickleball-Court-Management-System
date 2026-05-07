@@ -1,5 +1,6 @@
 const Tournaments = require("../models/tournaments");
 const TournamentParticipants = require("../models/tournamentParticipants");
+const TournamentBrackets = require("../models/tournamentBrackets");
 const AuditLog = require("../models/audit_logs");
 const mongoose = require("mongoose");
 
@@ -523,6 +524,166 @@ const getParticipants = async (tournamentId, query) => {
   };
 };
 
+const getBracketNameByIndex = (index) => {
+  let current = index;
+  let suffix = "";
+
+  do {
+    suffix = String.fromCharCode(65 + (current % 26)) + suffix;
+    current = Math.floor(current / 26) - 1;
+  } while (current >= 0);
+
+  return `Bảng ${suffix}`;
+};
+
+const generateBrackets = async (tournamentId, groupSize, user) => {
+  if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+    throw new Error("ID giải đấu không hợp lệ.");
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const tournament = await Tournaments.findOne({
+      _id: tournamentId,
+      is_deleted: false,
+    }).session(session);
+
+    if (!tournament) {
+      throw new Error("Không tìm thấy giải đấu.");
+    }
+
+    if (tournament.status !== TOURNAMENT_STATUSES.CLOSE_REGISTRATION) {
+      throw new Error(
+        "Chỉ được xếp bảng khi giải đấu đang ở trạng thái close_registration.",
+      );
+    }
+
+    const participants = await TournamentParticipants.find({
+      tournament_id: tournamentId,
+      is_deleted: false,
+      payment_status: "paid",
+    })
+      .populate("user_id", "_id full_name elo_score skill_rank")
+      .session(session);
+
+    const validParticipants = participants
+      .filter((participant) => participant.user_id)
+      .map((participant) => participant.user_id);
+
+    if (validParticipants.length < groupSize) {
+      throw new Error("Không đủ người chơi để chia bảng.");
+    }
+
+    const sortedUsers = validParticipants.sort((a, b) => {
+      const eloDiff = (b.elo_score || 0) - (a.elo_score || 0);
+      if (eloDiff !== 0) return eloDiff;
+      return String(a._id).localeCompare(String(b._id));
+    });
+
+    const totalGroups = Math.ceil(sortedUsers.length / groupSize);
+    const groupBuckets = Array.from({ length: totalGroups }, () => []);
+    let direction = 1;
+    let groupIndex = 0;
+
+    sortedUsers.forEach((userInfo) => {
+      groupBuckets[groupIndex].push(userInfo._id);
+
+      if (totalGroups === 1) {
+        return;
+      }
+
+      const isAtUpperBound = groupIndex === totalGroups - 1;
+      const isAtLowerBound = groupIndex === 0;
+
+      if (direction === 1 && isAtUpperBound) {
+        direction = -1;
+      } else if (direction === -1 && isAtLowerBound) {
+        direction = 1;
+      }
+
+      groupIndex += direction;
+    });
+
+    await TournamentBrackets.updateMany(
+      { tournament_id: tournamentId, is_deleted: false },
+      { $set: { is_deleted: true } },
+      { session },
+    );
+
+    const bracketDocs = groupBuckets.map((participantsInGroup, index) => ({
+      tournament_id: tournamentId,
+      name: getBracketNameByIndex(index),
+      participants: participantsInGroup,
+      status: "pending",
+      is_deleted: false,
+    }));
+
+    await TournamentBrackets.insertMany(bracketDocs, { session });
+
+    await AuditLog.create(
+      [
+        {
+          action: "generate_tournament_brackets",
+          target_collection: "tournament_brackets",
+          target_id: tournament._id,
+          user_id: user.userId,
+          old_value: null,
+          new_value: {
+            total_groups: totalGroups,
+            group_size: groupSize,
+            total_participants: sortedUsers.length,
+          },
+        },
+      ],
+      { session },
+    );
+
+    await session.commitTransaction();
+
+    const createdBrackets = await TournamentBrackets.find({
+      tournament_id: tournamentId,
+      is_deleted: false,
+    })
+      .populate("participants", "_id full_name elo_score skill_rank")
+      .sort({ name: 1 })
+      .lean();
+
+    return createdBrackets;
+  } catch (error) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
+  }
+};
+
+const getBrackets = async (tournamentId) => {
+  if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+    throw new Error("ID giải đấu không hợp lệ.");
+  }
+
+  const tournament = await Tournaments.findOne({
+    _id: tournamentId,
+    is_deleted: false,
+  }).lean();
+
+  if (!tournament) {
+    throw new Error("Không tìm thấy giải đấu.");
+  }
+
+  const brackets = await TournamentBrackets.find({
+    tournament_id: tournamentId,
+    is_deleted: false,
+  })
+    .populate("participants", "_id full_name elo_score skill_rank")
+    .sort({ name: 1 })
+    .lean();
+
+  return brackets;
+};
+
 module.exports = {
   TOURNAMENT_STATUSES,
   createTournament,
@@ -534,4 +695,6 @@ module.exports = {
   deleteTournament,
   registerForTournament,
   getParticipants,
+  generateBrackets,
+  getBrackets,
 };

@@ -153,6 +153,37 @@ const getParticipantsValidation = {
   }).unknown(true),
 };
 
+const generateBracketsValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "ID giải đấu không đúng định dạng hợp lệ",
+        "any.required": "ID giải đấu là bắt buộc",
+      }),
+  }),
+  body: Joi.object({
+    group_size: Joi.number().integer().min(2).default(4).messages({
+      "number.base": "group_size phải là số nguyên",
+      "number.integer": "group_size phải là số nguyên",
+      "number.min": "group_size phải lớn hơn hoặc bằng 2",
+    }),
+  }),
+};
+
+const getBracketsValidation = {
+  params: Joi.object({
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        "string.pattern.base": "ID giải đấu không đúng định dạng hợp lệ",
+        "any.required": "ID giải đấu là bắt buộc",
+      }),
+  }),
+};
+
 module.exports = {
   createTournamentValidation,
   getTournamentValidation,
@@ -162,4 +193,6 @@ module.exports = {
   deleteTournamentValidation,
   updateStatusValidation,
   updateTournamentValidation,
+  generateBracketsValidation,
+  getBracketsValidation,
 };
