@@ -9,7 +9,7 @@ const adminItems = [
   { label: "Chi nhánh", to: "/admin/branches" },
   { label: "Nhân viên", to: "/admin/staff" },
   { label: "Tất cả người dùng", to: "/admin/users" },
-  { label: "Giá", to: "/pricing" },
+  { label: "Giá", to: "/admin/pricing-rules" },
   { label: "Giải đấu", to: "/tournaments" },
 ];
 

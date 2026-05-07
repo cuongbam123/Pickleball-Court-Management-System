@@ -15,6 +15,7 @@ import AdminBranchPage from "../pages/admin/AdminBranchPage";
 import AdminCourtsPage from "../pages/admin/AdminCourtPage";
 import AdminStaffPage from "../pages/admin/AdminStaffPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import AdminPricingRulesPage from "../pages/admin/AdminPricingRulesPage";
 
 const AppRouteContent = () => {
   const location = useLocation();
@@ -86,6 +87,22 @@ const AppRouteContent = () => {
           element={
             <ProtectedRoute roles={["admin", "manager"]}>
               <AdminUsersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/pricing-rules"
+          element={
+            <ProtectedRoute roles={["admin", "manager"]}>
+              <AdminPricingRulesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricing"
+          element={
+            <ProtectedRoute roles={["admin", "manager"]}>
+              <AdminPricingRulesPage />
             </ProtectedRoute>
           }
         />
