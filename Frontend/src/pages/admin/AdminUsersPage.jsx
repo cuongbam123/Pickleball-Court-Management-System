@@ -116,6 +116,8 @@ const AdminUsersPage = () => {
     });
   };
 
+  const isFiltered = Boolean(selectedRole || searchName);
+
   const columns = [
     { header: "Tên", accessor: "full_name" },
     { header: "Email", accessor: "email" },
@@ -357,6 +359,15 @@ const AdminUsersPage = () => {
           viewMode={viewMode}
           renderGridItem={renderStaffCard}
           gridClassName="grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
+          skeletonCount={viewMode === "grid" ? 6 : 5}
+          emptyTitle={
+            isFiltered ? "Không tìm thấy người dùng" : "Chưa có người dùng"
+          }
+          emptyDescription={
+            isFiltered
+              ? "Không có tài khoản khớp bộ lọc hoặc từ khóa tìm kiếm. Thử đổi điều kiện."
+              : "Danh sách người dùng đang trống."
+          }
         />
       </div>
 

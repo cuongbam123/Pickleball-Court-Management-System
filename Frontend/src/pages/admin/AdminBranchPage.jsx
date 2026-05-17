@@ -163,10 +163,15 @@ const AdminBranchPage = () => {
           data={branches}
           loading={isLoading}
           rowKey="_id"
-          // Props điều khiển View
           viewMode={viewMode}
           renderGridItem={renderBranchCard}
           gridClassName="grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+          skeletonCount={viewMode === "grid" ? 6 : 5}
+          emptyTitle="Chưa có chi nhánh nào"
+          emptyDescription="Thêm chi nhánh đầu tiên để quản lý các cơ sở trên hệ thống."
+          emptyAction={
+            <Button onClick={handleOpenAdd}>+ Thêm chi nhánh</Button>
+          }
         />
         <BranchModal
           open={isModalOpen}

@@ -94,7 +94,6 @@ const AdminStaffPage = () => {
   const handleBranchChange = (value) => {
     setSelectedBranch(value);
   };
-
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -117,6 +116,8 @@ const AdminStaffPage = () => {
       alert(result.message || "Tạo nhân viên thất bại");
     }
   };
+
+  const isFiltered = Boolean(selectedBranch);
   const filteredUsers = users.filter((user) => {
     if (selectedBranch) {
       const userBranchId = getBranchId(user.branch_id);
@@ -304,6 +305,15 @@ const AdminStaffPage = () => {
           viewMode={viewMode}
           renderGridItem={renderStaffCard}
           gridClassName="grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
+          skeletonCount={viewMode === "grid" ? 6 : 5}
+          emptyTitle={
+            isFiltered ? "Không tìm thấy nhân viên" : "Chưa có nhân viên"
+          }
+          emptyDescription={
+            isFiltered
+              ? "Không có nhân viên thuộc chi nhánh đã chọn. Thử đổi bộ lọc."
+              : "Chưa có tài khoản staff trong hệ thống."
+          }
         />
       </div>
 

@@ -4,12 +4,17 @@ import { useAuth } from "../../hooks/useAuth";
 import UserHome from "../user/UserHome";
 import StaffHome from "../staff/StaffHome";
 import AdminHome from "../admin/AdminHome";
+import SkeletonLoader from "../../components/ui/SkeletonLoader";
 
 const RoleHomePage = () => {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return <div className="p-6">Đang tải...</div>;
+    return (
+      <div className="mx-auto max-w-lg p-8" aria-busy="true" aria-label="Đang tải">
+        <SkeletonLoader variant="text" count={4} />
+      </div>
+    );
   }
 
   if (!isAuthenticated || !user) {

@@ -3,6 +3,8 @@ import { useAuthStore } from "../../../store/authStore";
 import { getMe, updateMe } from "../api/userApi"; // Đảm bảo rằng updateMe đã được import đúng
 import Button from "../../../components/ui/Button";
 import { getBranchById } from "../../facility/api/branchApi";
+import { ProfileInfoSkeleton } from "../../../components/ui/SkeletonLoader";
+import EmptyState from "../../../components/ui/EmptyState";
 
 const ProfileForm = () => {
   const { setAuth } = useAuthStore();
@@ -14,17 +16,24 @@ const ProfileForm = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await getMe(); // Gọi API để lấy dữ liệu người dùng
+        setIsFetching(true);
+        setFetchError(null);
+        const response = await getMe();
         const newUser = response.data?.data || response.data;
         setUser(newUser);
         setFullName(newUser?.full_name || "");
         console.log("Dữ liệu người dùng đã được tải:", newUser);
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu người dùng:", error);
+        setFetchError("Không thể tải thông tin cá nhân. Vui lòng thử lại sau.");
+      } finally {
+        setIsFetching(false);
       }
     };
 
@@ -101,7 +110,20 @@ const ProfileForm = () => {
           </p>
         </div>
 
-        {!isEditing ? (
+        {isFetching ? (
+          <ProfileInfoSkeleton />
+        ) : fetchError ? (
+          <EmptyState
+            variant="light"
+            title="Không tải được hồ sơ"
+            description={fetchError}
+            actionButton={
+              <Button type="button" onClick={() => window.location.reload()}>
+                Thử lại
+              </Button>
+            }
+          />
+        ) : !isEditing ? (
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <InfoItem label="Họ tên" value={user?.full_name || "Chưa có"} />

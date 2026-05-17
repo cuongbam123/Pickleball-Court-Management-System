@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
 
 const apiClient = axios.create({
@@ -30,7 +31,7 @@ apiClient.interceptors.request.use(
 
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // RESPONSE
@@ -42,8 +43,9 @@ apiClient.interceptors.response.use(
     const { refresh_token, setAccessToken, clearAuth } =
       useAuthStore.getState();
 
-    // ❌ network error
+    // Network error
     if (!error.response) {
+      toast.error("Không thể kết nối máy chủ, kiểm tra kết nối mạng.");
       return Promise.reject({ message: "Network error" });
     }
 
@@ -53,14 +55,30 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ❌ không phải 401
-    if (error.response.status !== 401 || originalRequest._retry) {
+    const { status } = error.response;
+
+    // 403 – Không có quyền truy cập
+    if (status === 403) {
+      toast.error("Không có quyền truy cập.");
+      clearAuth();
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // 5xx – Lỗi hệ thống
+    if (status >= 500) {
+      toast.error("Lỗi hệ thống, vui lòng thử lại sau.");
+      return Promise.reject(error);
+    }
+
+    // Không phải 401
+    if (status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
     originalRequest._retry = true;
 
-    // 👉 đang refresh → queue
+    // Đang refresh → queue
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({
@@ -81,7 +99,7 @@ apiClient.interceptors.response.use(
       const res = await axios.post(
         `${import.meta.env.VITE_API_URL}/api/v1/auth/refreshToken`,
         { refresh_token },
-        { withCredentials: true }
+        { withCredentials: true },
       );
 
       const newToken =
@@ -90,7 +108,7 @@ apiClient.interceptors.response.use(
         res?.data?.token;
 
       if (!newToken) throw new Error("Invalid refresh");
-      
+
       setAccessToken(newToken);
 
       processQueue(null, newToken);
@@ -108,7 +126,7 @@ apiClient.interceptors.response.use(
     } finally {
       isRefreshing = false;
     }
-  }
+  },
 );
 
 export default apiClient;

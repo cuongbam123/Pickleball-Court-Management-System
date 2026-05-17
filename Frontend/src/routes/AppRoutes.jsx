@@ -18,6 +18,7 @@ import AdminBranchPage from "../pages/admin/AdminBranchPage";
 import AdminCourtsPage from "../pages/admin/AdminCourtPage";
 import AdminStaffPage from "../pages/admin/AdminStaffPage";
 import AdminUsersPage from "../pages/admin/AdminUsersPage";
+import UITestPage from "../pages/dev/UITestPage";
 
 const AppRouteContent = () => {
   const location = useLocation();
@@ -26,6 +27,7 @@ const AppRouteContent = () => {
     <div key={location.pathname} className="route-transition">
       <Routes location={location}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/dev/ui-test" element={<UITestPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />

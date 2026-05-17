@@ -25,6 +25,7 @@ const AdminCourtPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourt, setEditingCourt] = useState(null);
   const [viewMode, setViewMode] = useState("table");
+  const isFiltered = Boolean(selectedBranchFilter);
 
   const handleOpenAdd = () => {
     setEditingCourt(null);
@@ -227,14 +228,34 @@ const AdminCourtPage = () => {
           />
         </div>
 
-        <Table 
-          columns={columns} 
-          data={courts} 
-          loading={isLoading} 
+        <Table
+          columns={columns}
+          data={courts}
+          loading={isLoading}
           rowKey="_id"
           viewMode={viewMode}
           renderGridItem={renderCourtCard}
           gridClassName="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          skeletonCount={viewMode === "grid" ? 8 : 5}
+          emptyTitle={
+            isFiltered ? "Không có sân phù hợp" : "Chưa có sân nào"
+          }
+          emptyDescription={
+            isFiltered
+              ? "Thử chọn chi nhánh khác hoặc bỏ bộ lọc để xem tất cả sân."
+              : "Thêm sân Pickleball đầu tiên vào hệ thống."
+          }
+          emptyAction={
+            !isFiltered ? (
+              <button
+                type="button"
+                onClick={handleOpenAdd}
+                className="bg-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:bg-blue-700"
+              >
+                + Thêm sân mới
+              </button>
+            ) : undefined
+          }
         />
         <CourtModal
           open={isModalOpen}
