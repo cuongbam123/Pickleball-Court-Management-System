@@ -1,4 +1,9 @@
 import clsx from "clsx";
+import EmptyState from "./EmptyState";
+import {
+  DataCardSkeletonGrid,
+  TableBodySkeleton,
+} from "./SkeletonLoader";
 
 export default function Table({
   columns = [],
@@ -6,61 +11,99 @@ export default function Table({
   loading = false,
   rowKey = "_id",
   emptyText = "Không có dữ liệu",
+  emptyTitle,
+  emptyDescription,
+  emptyAction,
+  emptyVariant = "light",
   className,
-
-  // 👉 THÊM PROPS CHO VIEW MODE
-  viewMode = "table", // "table" | "grid"
-  renderGridItem, // (row, index) => ReactNode
-  gridClassName = "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4", // Layout mặc định cho grid
-
-  // selectable
+  viewMode = "table",
+  renderGridItem,
+  gridClassName = "grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4",
+  skeletonCount = 6,
   selectable = false,
   selectedRowKeys = [],
   onSelectRow,
   onSelectAll,
-
-  // row click
   onRowClick,
 }) {
-  // 👉 loading state
+  const resolvedEmptyTitle = emptyTitle ?? emptyText;
+
   if (loading) {
+    if (viewMode === "grid") {
+      return (
+        <DataCardSkeletonGrid
+          count={skeletonCount}
+          className={gridClassName}
+        />
+      );
+    }
+
+    const colCount = Math.max(columns.length, 1);
+
     return (
-      <div className="rounded-2xl border bg-white p-10 shadow-sm flex flex-col items-center justify-center space-y-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-        <div className="text-gray-500">Đang tải dữ liệu...</div>
+      <div
+        className={clsx(
+          "overflow-hidden rounded-2xl border bg-white shadow-sm",
+          className,
+        )}
+        aria-busy="true"
+        aria-label="Đang tải dữ liệu"
+      >
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                {selectable && <th className="px-4 py-3" />}
+                {columns.map((col, index) => (
+                  <th
+                    key={col.key || col.accessor || index}
+                    className="px-4 py-3 text-left font-semibold text-gray-700 whitespace-nowrap"
+                  >
+                    {col.title || col.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <TableBodySkeleton
+              rows={skeletonCount}
+              cols={selectable ? colCount + 1 : colCount}
+            />
+          </table>
+        </div>
       </div>
     );
   }
 
-  // 👉 empty state
   if (!data.length) {
     return (
-      <div className="rounded-2xl border bg-white p-10 shadow-sm text-center text-gray-500">
-        {emptyText}
-      </div>
+      <EmptyState
+        variant={emptyVariant}
+        title={resolvedEmptyTitle}
+        description={emptyDescription}
+        actionButton={emptyAction}
+        className={className}
+      />
     );
   }
 
-  // ==========================================
-  // RENDER DẠNG GRID (DẠNG THẺ)
-  // ==========================================
   if (viewMode === "grid") {
     return (
       <div className={clsx("grid", gridClassName, className)}>
         {data.map((row, rowIndex) => (
           <div key={row[rowKey] || rowIndex} className="h-full">
-            {renderGridItem
-              ? renderGridItem(row, rowIndex)
-              : <div className="p-4 border text-red-500">Vui lòng truyền renderGridItem prop</div>}
+            {renderGridItem ? (
+              renderGridItem(row, rowIndex)
+            ) : (
+              <div className="p-4 border text-red-500">
+                Vui lòng truyền renderGridItem prop
+              </div>
+            )}
           </div>
         ))}
       </div>
     );
   }
 
-  // ==========================================
-  // RENDER DẠNG TABLE (BẢNG TRUYỀN THỐNG)
-  // ==========================================
   const allSelected =
     data.length > 0 &&
     data.every((item) => selectedRowKeys.includes(item[rowKey]));
@@ -69,12 +112,11 @@ export default function Table({
     <div
       className={clsx(
         "overflow-hidden rounded-2xl border bg-white shadow-sm",
-        className
+        className,
       )}
     >
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          {/* HEADER */}
           <thead className="bg-gray-50">
             <tr>
               {selectable && (
@@ -99,7 +141,6 @@ export default function Table({
             </tr>
           </thead>
 
-          {/* BODY */}
           <tbody>
             {data.map((row, rowIndex) => {
               const isSelected = selectedRowKeys.includes(row[rowKey]);
@@ -112,7 +153,7 @@ export default function Table({
                     "border-t transition-colors",
                     onRowClick && "cursor-pointer",
                     "hover:bg-gray-50",
-                    isSelected && "bg-blue-50"
+                    isSelected && "bg-blue-50",
                   )}
                 >
                   {selectable && (
@@ -138,7 +179,7 @@ export default function Table({
                       >
                         {col.render
                           ? col.render(row, rowIndex)
-                          : row[dataKey] ?? "-"}
+                          : (row[dataKey] ?? "-")}
                       </td>
                     );
                   })}

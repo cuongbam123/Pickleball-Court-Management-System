@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { logoutApi } from "../../features/auth/api/authApi";
 import { useAuthStore } from "../../store/authStore";
+import SkeletonLoader from "../../components/ui/SkeletonLoader";
 
 const LogoutPage = () => {
   const navigate = useNavigate();
@@ -32,8 +33,13 @@ const LogoutPage = () => {
   }, [refresh_token, clearAuth, navigate]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 text-gray-600">
-      Đang đăng xuất...
+    <div
+      className="flex min-h-screen flex-col items-center justify-center gap-4 bg-gray-50 px-6"
+      aria-busy="true"
+      aria-label="Đang đăng xuất"
+    >
+      <SkeletonLoader variant="text" count={2} />
+      <p className="text-sm text-gray-600">Đang đăng xuất...</p>
     </div>
   );
 };

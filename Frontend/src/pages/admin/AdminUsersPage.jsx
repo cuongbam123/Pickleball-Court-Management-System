@@ -80,6 +80,7 @@ const AdminUsersPage = () => {
     setSelectedRole(value);
   };
 
+  const isFiltered = Boolean(selectedRole);
   const filteredUsers = users.filter((user) => {
     if (selectedRole && user.role !== selectedRole) {
       return false;
@@ -276,6 +277,15 @@ const AdminUsersPage = () => {
           viewMode={viewMode}
           renderGridItem={renderStaffCard}
           gridClassName="grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3"
+          skeletonCount={viewMode === "grid" ? 6 : 5}
+          emptyTitle={
+            isFiltered ? "Không tìm thấy người dùng" : "Chưa có người dùng"
+          }
+          emptyDescription={
+            isFiltered
+              ? "Không có tài khoản với vai trò đã chọn. Thử đổi bộ lọc."
+              : "Danh sách người dùng đang trống."
+          }
         />
       </div>
 

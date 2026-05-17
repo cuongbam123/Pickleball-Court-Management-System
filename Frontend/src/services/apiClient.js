@@ -1,4 +1,5 @@
 import axios from "axios";
+import toast from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
 
 const apiClient = axios.create({
@@ -43,11 +44,29 @@ apiClient.interceptors.response.use(
 
     // ❌ network error
     if (!error.response) {
+      toast.error("Không thể kết nối máy chủ, kiểm tra kết nối mạng.");
       return Promise.reject({ message: "Network error" });
     }
 
+    const { status } = error.response;
+
+    // 🚫 403 – Không có quyền truy cập
+    if (status === 403) {
+      toast.error("Không có quyền truy cập.");
+      // Xoá thông tin xác thực và chuyển về trang đăng nhập
+      useAuthStore.getState().clearAuth();
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    // 💥 5xx – Lỗi hệ thống
+    if (status >= 500) {
+      toast.error("Lỗi hệ thống, vui lòng thử lại sau.");
+      return Promise.reject(error);
+    }
+
     // ❌ không phải 401
-    if (error.response.status !== 401 || originalRequest._retry) {
+    if (status !== 401 || originalRequest._retry) {
       return Promise.reject(error);
     }
 
