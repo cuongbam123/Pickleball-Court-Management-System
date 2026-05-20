@@ -12,14 +12,55 @@ const AuditLog = require("../models/audit_logs");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
+const getIdString = (value) => {
+  if (!value) return null;
+  return (value._id || value.id || value).toString();
+};
+
+const assertCanAccessOrder = (order, user, { allowCustomer = false } = {}) => {
+  if (!user) {
+    const error = new Error("Bạn cần đăng nhập để thao tác hóa đơn");
+    error.status = 401;
+    throw error;
+  }
+
+  if (user.role === "admin") return;
+
+  if (user.role === "staff") {
+    const staffBranchId = getIdString(user.branch_id);
+    const orderBranchId = getIdString(order.branch_id);
+
+    if (staffBranchId && orderBranchId === staffBranchId) return;
+
+    const error = new Error("Bạn không có quyền thao tác hóa đơn của chi nhánh khác");
+    error.status = 403;
+    throw error;
+  }
+
+  if (allowCustomer) {
+    const currentUserId = getIdString(user.userId || user._id || user.id);
+    const orderUserId = getIdString(order.user_id);
+
+    if (currentUserId && orderUserId === currentUserId) return;
+  }
+
+  const error = new Error("Bạn không có quyền thao tác hóa đơn này");
+  error.status = 403;
+  throw error;
+};
+
 const getOrders = async (query, user) => {
-  const { branch_id, date, payment_status, page = 1, limit = 20 } = query;
+  const { branch_id, date, payment_status, booking_id, page = 1, limit = 20 } = query;
   const filter = { is_deleted: false };
 
   if (user.role === "staff") {
     filter.branch_id = user.branch_id;
   } else if (user.role === "admin" && branch_id) {
     filter.branch_id = branch_id;
+  }
+
+  if (booking_id) {
+    filter.booking_id = booking_id;
   }
 
   if (date) {
@@ -67,6 +108,76 @@ const getOrders = async (query, user) => {
   };
 };
 
+const ensureOrderForBooking = async (bookingId, user) => {
+  const existingOrder = await Order.findOne({
+    booking_id: bookingId,
+    is_deleted: false,
+  });
+
+  if (existingOrder) {
+    assertCanAccessOrder(existingOrder, user);
+    return existingOrder;
+  }
+
+  const booking = await Booking.findOne({
+    _id: bookingId,
+    is_deleted: false,
+  }).lean();
+
+  if (!booking) {
+    const error = new Error("Không tìm thấy thông tin đặt sân");
+    error.status = 404;
+    throw error;
+  }
+
+  assertCanAccessOrder(
+    {
+      user_id: booking.user_id,
+      branch_id: booking.branch_id,
+    },
+    user,
+  );
+
+  if (!["deposited", "playing"].includes(booking.status)) {
+    const error = new Error(
+      "Chỉ có thể tạo hóa đơn cho lịch đã cọc hoặc đang chơi",
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  const depositPaid = Number(booking.deposit_amount || 0);
+  const totalCourtFee = Number(booking.total_court_price || 0);
+
+  try {
+    return await Order.create({
+      booking_id: booking._id,
+      user_id: booking.user_id,
+      branch_id: booking.branch_id,
+      total_court_fee: totalCourtFee,
+      total_pos_fee: 0,
+      deposit_paid: depositPaid,
+      final_amount_due: Math.max(totalCourtFee - depositPaid, 0),
+      payment_status: "deposit_paid",
+      is_temporary: false,
+    });
+  } catch (error) {
+    if (error.code === 11000) {
+      const order = await Order.findOne({
+        booking_id: bookingId,
+        is_deleted: false,
+      });
+
+      if (order) {
+        assertCanAccessOrder(order, user);
+        return order;
+      }
+    }
+
+    throw error;
+  }
+};
+
 const getOrderDetail = async (orderId, user) => {
   const order = await Order.findById(orderId)
     .populate("user_id", "full_name phone")
@@ -75,12 +186,7 @@ const getOrderDetail = async (orderId, user) => {
 
   if (!order || order.is_deleted) throw new Error("Hóa đơn không tồn tại");
 
-  if (
-    user.role === "customer" &&
-    order.user_id._id.toString() !== user._id.toString()
-  ) {
-    throw new Error("Bạn không có quyền xem hóa đơn này");
-  }
+  assertCanAccessOrder(order, user, { allowCustomer: true });
 
   return order;
 };
@@ -93,10 +199,7 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
   const order = await Order.findById(orderId);
   if (!order || order.is_deleted) throw new Error("Hóa đơn không tồn tại");
 
-  const currentUserId = user.userId || user._id || user.id;
-  if (user.role === "customer" && order.user_id.toString() !== currentUserId.toString()) {
-    throw new Error("Bạn không có quyền thanh toán cho hóa đơn này");
-  }
+  assertCanAccessOrder(order, user, { allowCustomer: true });
 
   if (order.payment_status === "fully_paid") {
     throw new Error("Hóa đơn này đã được thanh toán hoàn tất");
@@ -204,13 +307,14 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
   }
 };
 
-const checkoutOrder = async (orderId, payment_method, amount_received) => { // thiếu check role staff
+const checkoutOrder = async (orderId, payment_method, amount_received, user) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
+    assertCanAccessOrder(order, user);
 
     if (order.payment_status === "fully_paid") {
       throw new Error("Hóa đơn này đã được thanh toán hoàn tất trước đó");
@@ -259,13 +363,14 @@ const checkoutOrder = async (orderId, payment_method, amount_received) => { // t
   }
 };
 
-const addPosItemsToOrder = async (orderId, items) => {
+const addPosItemsToOrder = async (orderId, items, user) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
+    assertCanAccessOrder(order, user);
     if (order.payment_status === "fully_paid")
       throw new Error("Hóa đơn đã chốt sổ, không thể thêm đồ POS");
 
@@ -314,13 +419,14 @@ const addPosItemsToOrder = async (orderId, items) => {
   }
 };
 
-const updatePosItemQuantity = async (orderId, productId, newQuantity) => {
+const updatePosItemQuantity = async (orderId, productId, newQuantity, user) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
+    assertCanAccessOrder(order, user);
     if (order.payment_status === "fully_paid")
       throw new Error("Hóa đơn đã chốt sổ, không thể sửa đổi");
 
@@ -398,6 +504,7 @@ function sortObject(obj) {
 
 module.exports = {
   getOrders,
+  ensureOrderForBooking,
   getOrderDetail,
   createDepositPaymentUrl,
   checkoutOrder,

@@ -4,6 +4,8 @@ import { useAuthStore } from "../../../store/authStore";
 import dayjs from "dayjs";
 import Button from "../../../components/ui/Button";
 import { createBooking } from "../api/bookingApi";
+import { createDepositPaymentUrl } from "../../payment/api/paymentApi";
+import { getPaymentResultReturnUrl } from "../../payment/utils/paymentReturnUrl";
 import {
   clearPendingBookingDraft,
   readPendingBookingDraft,
@@ -26,6 +28,7 @@ const BookingForm = ({
     price: "",
     note: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, access_token } = useAuthStore();
@@ -70,6 +73,7 @@ const BookingForm = ({
   }, 0);
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     // 1. Validate Mảng
     if (!selectedSlots || selectedSlots.length === 0) {
@@ -167,9 +171,16 @@ const BookingForm = ({
       },
     };
     try {
+      setIsSubmitting(true);
       // Gọi API tạo đơn đặt sân (Booking nháp)
       const response = await createBooking(bookingPayload);
-      const bookingId = response?.data?.data?._id;
+      const createdBooking = response?.data?.data || {};
+      const bookingId =
+        createdBooking.booking_id || createdBooking._id || createdBooking.id;
+
+      if (!bookingId) {
+        throw new Error("Không lấy được mã lịch đặt sân sau khi giữ chỗ.");
+      }
 
       // ==========================================
       // T3: XỬ LÝ THANH TOÁN DỰA TRÊN ROLE
@@ -177,19 +188,30 @@ const BookingForm = ({
       if (user.role === "staff" || user.role === "admin") {
         // Nếu là Staff / Admin -> Đặt sân nội bộ, không cần cọc
         alert("Giữ chỗ thành công! (Tài khoản nội bộ miễn cọc)");
+        onSubmit?.(createdBooking);
+        setIsSubmitting(false);
 
         // Refresh lại lưới thời gian hoặc dọn sạch Form
         // setSelectedSlots([]);
         // refreshGrid();
       } else {
-        // Nếu là Customer -> Bắt buộc phải cọc
-        alert(
-          "Đặt sân thành công! Đang chuyển hướng sang trang thanh toán cọc...",
-        );
+        // Customer phải thanh toán cọc: sinh link VNPay rồi chuyển sang cổng thanh toán.
+        const paymentResponse = await createDepositPaymentUrl(bookingId, {
+          payment_method: "vnpay",
+          redirect_url: getPaymentResultReturnUrl(),
+        });
+        const paymentUrl = paymentResponse?.data?.data?.payment_url;
+
+        if (!paymentUrl) {
+          throw new Error("Không tạo được link thanh toán VNPay.");
+        }
+
+        window.location.assign(paymentUrl);
       }
     } catch (error) {
       console.error("Lỗi khi tạo booking:", error);
       alert(error?.response?.data?.message || "Có lỗi xảy ra khi đặt sân!");
+      setIsSubmitting(false);
     }
   };
 
@@ -272,9 +294,10 @@ const BookingForm = ({
         ></textarea>
         <Button
           type="submit"
+          loading={isSubmitting}
           className="w-full bg-blue-200 text-blue-800 hover:bg-blue-300 font-bold py-3 rounded-xl transition-colors"
         >
-          Đặt sân
+          {isSubmitting ? "Đang xử lý..." : "Đặt sân"}
         </Button>
       </form>
     </div>

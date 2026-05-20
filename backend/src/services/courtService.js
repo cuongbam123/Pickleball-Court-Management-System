@@ -62,8 +62,8 @@ const getCourtsByBranch = async (
     ...(status && { status }),
     ...(tagStatus && { tagStatus }),
   };
-  //check phai admin k
-  if (!isAdmin(currentUser)) {
+  // Role khác admin không được thấy sân đã soft delete.
+  if (!isAdmin) {
     query.is_deleted = false;
   }
 

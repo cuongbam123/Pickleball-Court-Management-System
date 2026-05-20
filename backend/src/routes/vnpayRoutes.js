@@ -1,7 +1,10 @@
 const express = require('express');
-const { vnpayIpn, vnpayReturn } = require('../controllers/vnpayController');
+const { optionalAuth } = require('../middlewares');
+const { vnpayIpn, vnpayReturn, getPaymentStatus } = require('../controllers/vnpayController');
 
 const router = express.Router();
+
+router.get('/status/:txnRef', optionalAuth, getPaymentStatus);
 
 router.get('/vnpay-ipn', vnpayIpn);
 

@@ -7,6 +7,9 @@ const getBookingsValidation = {
     court_id: Joi.string().pattern(objectIdRegex).optional().messages({
       "string.pattern.base": "court_id không hợp lệ",
     }),
+    branch_id: Joi.string().pattern(objectIdRegex).optional().messages({
+      "string.pattern.base": "branch_id không hợp lệ",
+    }),
     page: Joi.number().integer().min(1).default(1),
     limit: Joi.number().integer().min(1).max(100).default(100),
     user_id: Joi.string().pattern(objectIdRegex).optional().messages({

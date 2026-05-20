@@ -1,9 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import useBookingHistory from '../../features/booking/hooks/useBookingHistory';
 import BookingHistoryTable from '../../features/booking/components/BookingHistoryTable';
-import MainLayout from '../../layouts/MainLayout';
+import StaffLayout from '../../layouts/StaffLayout';
+import { getOrders } from '../../features/order/api/orderApi';
 
 const StaffBookingHistoryPage = () => {
+  const navigate = useNavigate();
+  const [isResolvingOrder, setIsResolvingOrder] = useState(false);
+
   // 1. GỌI HOOK LẤY DỮ LIỆU
   // Hook của chúng ta đã rất thông minh, tự động check Role từ Zustand 
   // nên không cần truyền biến phân biệt 'all' hay 'me' nữa.
@@ -14,6 +19,7 @@ const StaffBookingHistoryPage = () => {
     branches,   
     courtsList,
     setFilters,
+    isBranchLocked,
     changeBookingStatus,
     handleCancelBooking
   } = useBookingHistory({ status: '' }); // Mặc định lấy tất cả trạng thái
@@ -27,6 +33,26 @@ const StaffBookingHistoryPage = () => {
       } else {
         alert('Lỗi: ' + res.message);
       }
+    }
+  };
+
+  const handleViewInvoice = async (bookingId) => {
+    try {
+      setIsResolvingOrder(true);
+      const response = await getOrders({ booking_id: bookingId });
+      const orders = response?.data?.data || [];
+      const orderId = orders[0]?._id;
+
+      if (!orderId) {
+        alert('Chưa tìm thấy hóa đơn cho lịch đặt sân này.');
+        return;
+      }
+
+      navigate(`/admin/orders/${orderId}`);
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Không thể mở hóa đơn.');
+    } finally {
+      setIsResolvingOrder(false);
     }
   };
 
@@ -58,8 +84,8 @@ const StaffBookingHistoryPage = () => {
           </button>
         )}
 
-        {/* Nút Hủy: Hiện khi chưa chơi (pending_deposit hoặc deposited) */}
-        {(row.status === 'pending_deposit' || row.status === 'deposited') && (
+        {/* Nút Hủy: Hiện khi chưa chơi (holding hoặc deposited) */}
+        {(row.status === 'holding' || row.status === 'pending_deposit' || row.status === 'deposited') && (
           <button
             onClick={() => handleCancel(row._id)}
             className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-white border border-red-500 rounded-lg hover:bg-red-50 transition-colors shadow-sm"
@@ -72,13 +98,33 @@ const StaffBookingHistoryPage = () => {
         {row.status === 'playing' && (
           <span className="text-xs italic text-blue-600 font-medium">Đang chơi...</span>
         )}
+
+        {row.status === 'completed' && (
+          <button
+            type="button"
+            disabled={isResolvingOrder}
+            onClick={() => handleViewInvoice(row._id)}
+            className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+          >
+            Xem hóa đơn
+          </button>
+        )}
+
+        {(row.status === 'deposited' || row.status === 'playing') && (
+          <Link
+            to={`/staff/checkout/${row._id}`}
+            className="px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          >
+            Checkout
+          </Link>
+        )}
       </div>
     );
   };
 
   // 4. VẼ GIAO DIỆN TRANG CHÍNH
   return (
-    <MainLayout>
+    <StaffLayout>
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       
       {/* Box Tiêu đề & Thanh Công Cụ Lọc */}
@@ -91,11 +137,15 @@ const StaffBookingHistoryPage = () => {
         <div className="flex flex-col gap-1">
           <label className="text-sm font-medium text-slate-600">Chi nhánh</label>
           <select
-            className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white"
+            className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white disabled:bg-slate-100 disabled:text-slate-500"
             value={filters.branch_id || ''}
-            onChange={(e) => setFilters({ ...filters, branch_id: e.target.value })}
+            disabled={isBranchLocked}
+            onChange={(e) => setFilters({ ...filters, branch_id: e.target.value, court_id: '' })}
           >
-            <option value="">Tất cả chi nhánh</option>
+            {!isBranchLocked && <option value="">Tất cả chi nhánh</option>}
+            {isBranchLocked && !filters.branch_id && (
+              <option value="">Chưa gán chi nhánh</option>
+            )}
             {branches.map((branch) => (
               <option key={branch._id} value={branch._id}>
                 {branch.name} {/* Thay branch.name bằng tên trường đúng trong DB của bạn */}
@@ -141,7 +191,7 @@ const StaffBookingHistoryPage = () => {
               onChange={(e) => setFilters({ ...filters, status: e.target.value })}
             >
               <option value="">Tất cả trạng thái</option>
-              <option value="pending_deposit">Chờ cọc</option>
+              <option value="holding">Chờ cọc</option>
               <option value="deposited">Đã cọc (Chờ chơi)</option>
               <option value="playing">Đang chơi</option>
               <option value="completed">Hoàn thành</option>
@@ -156,11 +206,12 @@ const StaffBookingHistoryPage = () => {
       <BookingHistoryTable
         data={historyData}
         isLoading={isLoading}
+        showDepositColumn={false}
         renderActions={renderStaffActions}
       />
       
     </div>
-    </MainLayout>
+    </StaffLayout>
   );
 };
 

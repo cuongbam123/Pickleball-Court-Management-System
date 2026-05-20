@@ -3,12 +3,18 @@ import dayjs from 'dayjs';
 // Nhớ kiểm tra lại đường dẫn import Table này cho đúng với thư mục của bạn nhé!
 import Table from '../../../components/ui/Table'; 
 
-const BookingHistoryTable = ({ data, isLoading, renderActions }) => {
+const BookingHistoryTable = ({
+  data,
+  isLoading,
+  renderActions,
+  showDepositColumn = true,
+}) => {
   
   // 1. HÀM PHỤ TRỢ: Tự động đổi màu Trạng thái
   const getStatusBadge = (status) => {
     switch (status) {
       case 'pending_deposit':
+      case 'holding':
         return <span className="px-3 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Chờ cọc</span>;
       case 'deposited':
         return <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Đã cọc / Chờ chơi</span>;
@@ -70,15 +76,19 @@ const BookingHistoryTable = ({ data, isLoading, renderActions }) => {
         </span>
       )
     },
-    {
-      title: "Tiền cọc",
-      key: "price_deposit",
-      render: (row) => (
-        <span className="font-bold text-slate-900">
-          {row.deposit_amount?.toLocaleString('vi-VN')} đ
-        </span>
-      )
-    },
+    ...(showDepositColumn
+      ? [
+          {
+            title: "Tiền cọc",
+            key: "price_deposit",
+            render: (row) => (
+              <span className="font-bold text-slate-900">
+                {row.deposit_amount?.toLocaleString('vi-VN')} đ
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       title: "Trạng thái",
       key: "status",
@@ -95,11 +105,10 @@ if (renderActions) {
           return <span className="text-xs italic text-slate-400">Đã hủy</span>;
         }
         
-        if (row.status === 'completed') {
+        if (row.status === 'completed' && !renderActions) {
           return <span className="text-xs italic text-slate-400">Đã kết thúc</span>;
         }
 
-        // Các trạng thái bình thường khác thì vẫn nhường quyền cho trang Cha vẽ nút
         return renderActions(row);
       }
     });
