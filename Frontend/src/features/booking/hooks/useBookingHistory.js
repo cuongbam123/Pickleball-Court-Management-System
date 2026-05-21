@@ -1,32 +1,75 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getBranches } from "../../facility/api/branchApi";
-import { getAllCourts, getCourtsByBranch } from "../../facility/api/courtApi";
+import { getAllCourts } from "../../facility/api/courtApi";
 import {
   getAllBookings,
   updateBooking,
   cancelBooking,
-  getBookings,
 } from "../api/bookingApi";
 import { useAuthStore } from "../../../store/authStore";
+
+const getEntityId = (value) => value?._id || value?.id || value || "";
+const isObjectId = (value) => /^[0-9a-fA-F]{24}$/.test(String(value || ""));
 
 const useBookingHistory = (initialFilters = {}) => {
   const { user } = useAuthStore();
   const userRole = user?.role;
   const userId = user?._id || user?.id;
-  //user.branch
+  const staffBranchId = getEntityId(user?.branch_id || user?.branch);
+  const isBranchLocked = userRole === "staff";
 
   const [historyData, setHistoryData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
+  const [filters, setFiltersState] = useState({
     status: "",
     date: "",
-    branch_id: "",
     court_id: "",
     ...initialFilters,
+    branch_id: isBranchLocked ? staffBranchId : initialFilters.branch_id || "",
   });
   const [branches, setBranches] = useState([]);
   const [courtsList, setCourtsList] = useState([]);
+
+  const visibleBranches = useMemo(() => {
+    if (!isBranchLocked || !staffBranchId) return branches;
+    return branches.filter((branch) => getEntityId(branch) === staffBranchId);
+  }, [branches, isBranchLocked, staffBranchId]);
+
+  const setFilters = useCallback(
+    (nextFilters) => {
+      setFiltersState((prev) => {
+        const resolved =
+          typeof nextFilters === "function" ? nextFilters(prev) : nextFilters;
+        const nextBranchId = Object.prototype.hasOwnProperty.call(
+          resolved,
+          "branch_id",
+        )
+          ? resolved.branch_id
+          : prev.branch_id;
+
+        return {
+          ...prev,
+          ...resolved,
+          branch_id: isBranchLocked ? staffBranchId : nextBranchId,
+        };
+      });
+    },
+    [isBranchLocked, staffBranchId],
+  );
+
+  useEffect(() => {
+    if (!isBranchLocked || !staffBranchId) return;
+
+    setFiltersState((prev) => {
+      if (prev.branch_id === staffBranchId) return prev;
+      return {
+        ...prev,
+        branch_id: staffBranchId,
+        court_id: "",
+      };
+    });
+  }, [isBranchLocked, staffBranchId]);
 
   useEffect(() => {
     const fetchMasterBranches = async () => {
@@ -45,9 +88,18 @@ const useBookingHistory = (initialFilters = {}) => {
     const fetchDynamicCourts = async () => {
       try {
         let res;
-        // Nếu đang chọn 1 chi nhánh cụ thể -> Gọi API lấy sân theo chi nhánh đó
+        // Nếu đang chọn 1 chi nhánh cụ thể -> lọc sân qua endpoint /courts
+        // để tránh phụ thuộc route nested /branches/:branchId/courts.
         if (filters.branch_id) {
-          res = await getCourtsByBranch(filters.branch_id);
+          if (!isObjectId(filters.branch_id)) {
+            setCourtsList([]);
+            return;
+          }
+
+          res = await getAllCourts({
+            branch_id: filters.branch_id,
+            limit: 100,
+          });
         }
         // Nếu để trống (Tất cả chi nhánh) -> Gọi API lấy tất cả sân
         else {
@@ -57,7 +109,7 @@ const useBookingHistory = (initialFilters = {}) => {
 
         // Optional: Tự động reset court_id về rỗng nếu người dùng đổi chi nhánh
         // Để tránh lỗi đang chọn "Sân A của Chi nhánh 1" mà lại chuyển sang "Chi nhánh 2"
-        setFilters((prev) => ({ ...prev, court_id: "" }));
+        setFiltersState((prev) => ({ ...prev, court_id: "" }));
       } catch (err) {
         console.error("Lỗi tải danh sách sân:", err);
       }
@@ -71,6 +123,11 @@ const useBookingHistory = (initialFilters = {}) => {
     try {
       // Khởi tạo params từ các bộ lọc trên giao diện (ngày, trạng thái...)
       const finalParams = { ...filters };
+
+      // Staff chỉ được xem lịch sử booking/order của chi nhánh được gán.
+      if (isBranchLocked && staffBranchId) {
+        finalParams.branch_id = staffBranchId;
+      }
 
       // NẾU LÀ CUSTOMER: Ép cứng thêm ID của họ vào params để Backend lọc
       if (userRole === "customer" && userId) {
@@ -92,7 +149,8 @@ const useBookingHistory = (initialFilters = {}) => {
       const data = response?.data?.data || response?.data || [];
 
       const statusPriority = {
-        pending_deposit: 1, 
+        holding: 1,
+        pending_deposit: 1,
         deposited: 2,      
         playing: 3,         
         completed: 4,       
@@ -122,7 +180,7 @@ const useBookingHistory = (initialFilters = {}) => {
     } finally {
       setIsLoading(false);
     }
-  }, [filters, userRole, userId]);
+  }, [filters, isBranchLocked, staffBranchId, userRole, userId]);
 
   // Chạy hàm fetchHistory 1 lần khi trang vừa load xong
   useEffect(() => {
@@ -166,9 +224,11 @@ const useBookingHistory = (initialFilters = {}) => {
     isLoading,
     error,
     filters,
-    branches, 
+    branches: visibleBranches,
     courtsList,
     setFilters,
+    isBranchLocked,
+    staffBranchId,
     changeBookingStatus,
     handleCancelBooking,
     refresh: fetchHistory,

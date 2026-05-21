@@ -42,7 +42,9 @@ const getBookings = async (query, user) => {
   filter.user_id = user_id;
 }
 
-  if (branch_id) {
+  if (user?.role === "staff" && user.branch_id) {
+    filter.branch_id = user.branch_id;
+  } else if (branch_id) {
     filter.branch_id = branch_id;
   }
   if (status){
@@ -368,6 +370,27 @@ const holdBooking = async (body, user) => {
       );
 
       createdBooking = createdDocs[0];
+
+      if (initialStatus !== "holding") {
+        const createdOrderDocs = await Order.create(
+          [
+            {
+              booking_id: createdBooking._id,
+              user_id: user.userId,
+              branch_id,
+              total_court_fee: total_court_price,
+              total_pos_fee: 0,
+              deposit_paid: initialDepositPaid,
+              final_amount_due: total_court_price - initialDepositPaid,
+              payment_status: initialPaymentStatus,
+              is_temporary: false,
+            },
+          ],
+          { session },
+        );
+
+        createdOrder = createdOrderDocs[0];
+      }
     });
 
     const draftOrder = {
@@ -520,7 +543,7 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
 
       if (booking.deposit_amount !== vnp_Amount) {
         throw new Error("04");
-      }
+      } 
 
       if (booking.status !== "holding") {
         throw new Error("02");
@@ -605,22 +628,6 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
         } else {
           errorMessage = `Không thể check-in. Trạng thái hiện tại đang là '${currentStatus}', yêu cầu phải là 'deposited'.`;
         }
-
-        // Kiểm tra thời gian check-in
-        const diffMins = (booking.start_time - now) / (1000 * 60);
-        if (diffMins > 30 && user.role !== "admin" && user.role !== "staff") {
-          const error = new Error(
-            "Còn quá sớm để check-in. Vui lòng quay lại trước giờ bắt đầu 30 phút.",
-          );
-          error.statusCode = 400;
-          throw error;
-        }
-
-        await Court.findByIdAndUpdate(
-          booking.court_id,
-          { tagStatus: "playing" },
-          { session },
-        );
       }
 
       // Xử lý nếu trạng thái chuyển đổi không hợp lệ
@@ -628,6 +635,27 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
         const error = new Error(errorMessage);
         error.statusCode = 400;
         throw error;
+      }
+
+      // ktr thời gian check-in (mọi role: tối đa 30 phút trước / sau giờ bắt đầu)
+      if (newStatus === "playing") {
+        const startTime = new Date(booking.start_time);
+        const diffMins = (startTime.getTime() - now.getTime()) / (1000 * 60);
+        if (diffMins > 30) {
+          const error = new Error(
+            "Còn quá sớm để check-in. Vui lòng quay lại trước giờ bắt đầu 30 phút.",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+        const outTimes = (now.getTime() - startTime.getTime()) / (1000 * 60);
+        if (outTimes > 30) {
+          const error = new Error(
+            "Đã quá giờ check-in. Vui lòng liên hệ quản lý.",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
       }
 
       // Lưu lại thông tin Booking

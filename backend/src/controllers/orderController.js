@@ -35,6 +35,23 @@ const getOrderDetail = async (req, res, next) => {
   }
 };
 
+const ensureOrderForBooking = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const user = req.user;
+
+    const order = await orderService.ensureOrderForBooking(bookingId, user);
+
+    res.status(200).json({
+      success: true,
+      message: "Đảm bảo hóa đơn cho booking thành công",
+      data: order,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const payDeposit = async (req, res, next) => {
   try {
     const bookingId = req.params.id;
@@ -62,8 +79,9 @@ const addPosItems = async (req, res, next) => {
   try {
     const orderId = req.params.id;
     const items = req.body.items;
+    const user = req.user;
 
-    const updatedOrder = await orderService.addPosItemsToOrder(orderId, items);
+    const updatedOrder = await orderService.addPosItemsToOrder(orderId, items, user);
 
     res.status(200).json({
       success: true,
@@ -79,11 +97,13 @@ const updatePosItem = async (req, res, next) => {
   try {
     const orderId = req.params.id;
     const { product_id, quantity } = req.body;
+    const user = req.user;
 
     const updatedOrder = await orderService.updatePosItemQuantity(
       orderId,
       product_id,
       quantity,
+      user,
     );
 
     res.status(200).json({
@@ -103,11 +123,13 @@ const checkout = async (req, res, next) => {
   try {
     const orderId = req.params.id;
     const { payment_method, amount_received } = req.body;
+    const user = req.user;
 
     const updatedOrder = await orderService.checkoutOrder(
       orderId,
       payment_method,
       amount_received,
+      user,
     );
 
     res.status(200).json({
@@ -123,6 +145,7 @@ const checkout = async (req, res, next) => {
 module.exports = {
   getOrders,
   getOrderDetail,
+  ensureOrderForBooking,
   payDeposit,
   addPosItems,
   updatePosItem,

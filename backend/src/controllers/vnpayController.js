@@ -1,7 +1,25 @@
 const crypto = require("crypto");
 const querystring = require("qs");
+const mongoose = require("mongoose");
 const bookingService = require("../services/bookingService");
-const orderService = require("../services/orderService"); 
+const orderService = require("../services/orderService");
+const Booking = require("../models/bookings");
+const Order = require("../models/orders");
+
+const VNPAY_FAILURE_REASONS = {
+  "07": "Giao dịch bị nghi ngờ gian lận.",
+  "09": "Thẻ hoặc tài khoản chưa đăng ký Internet Banking.",
+  "10": "Xác thực thông tin thẻ không thành công.",
+  "11": "Giao dịch đã hết hạn thanh toán.",
+  "12": "Thẻ hoặc tài khoản đang bị khóa.",
+  "13": "Mã OTP không chính xác.",
+  "24": "Khách hàng đã hủy giao dịch.",
+  "51": "Tài khoản không đủ số dư.",
+  "65": "Tài khoản đã vượt quá hạn mức giao dịch trong ngày.",
+  "75": "Ngân hàng đang bảo trì.",
+  "79": "Nhập sai mật khẩu thanh toán quá số lần quy định.",
+};
+
 function sortObject(obj) {
   let sorted = {};
   let str = [];
@@ -17,6 +35,190 @@ function sortObject(obj) {
   }
   return sorted;
 }
+
+const getUserId = (user) => user?.userId || user?._id || user?.id;
+
+const ensureCanViewPayment = (resourceUserId, user, allowSignedReturn = false) => {
+  if (allowSignedReturn) return;
+
+  if (!user) {
+    const error = new Error("Bạn cần đăng nhập để kiểm tra trạng thái thanh toán");
+    error.status = 401;
+    throw error;
+  }
+
+  if (["admin", "staff"].includes(user.role)) return;
+
+  const currentUserId = getUserId(user);
+  if (!currentUserId || resourceUserId.toString() !== currentUserId.toString()) {
+    const error = new Error("Bạn không có quyền xem giao dịch này");
+    error.status = 403;
+    throw error;
+  }
+};
+
+const getFailureReason = (responseCode) =>
+  VNPAY_FAILURE_REASONS[responseCode] ||
+  `VNPay trả về mã lỗi ${responseCode || "không xác định"}`;
+
+const verifySignedReturnParams = (query, expectedTxnRef) => {
+  if (!query?.vnp_SecureHash) {
+    return {
+      hasSignedParams: false,
+      isValid: false,
+      responseCode: null,
+    };
+  }
+
+  let vnpParams = { ...query };
+  const secureHash = vnpParams.vnp_SecureHash;
+
+  delete vnpParams.vnp_SecureHash;
+  delete vnpParams.vnp_SecureHashType;
+
+  vnpParams = sortObject(vnpParams);
+
+  const signData = querystring.stringify(vnpParams, { encode: false });
+  const hmac = crypto.createHmac("sha512", process.env.VNP_HASH_SECRET);
+  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+  return {
+    hasSignedParams: true,
+    isValid:
+      secureHash === signed &&
+      (!expectedTxnRef || vnpParams.vnp_TxnRef === expectedTxnRef),
+    responseCode: vnpParams.vnp_ResponseCode,
+  };
+};
+
+const getPaymentStatus = async (req, res, next) => {
+  try {
+    const txnRef = String(req.params.txnRef || "").trim();
+
+    if (!txnRef) {
+      const error = new Error("Thiếu mã giao dịch VNPay");
+      error.status = 400;
+      throw error;
+    }
+
+    // 1. Xác thực chữ ký từ URL params (Tránh fake responseCode)
+    const signedReturn = verifySignedReturnParams(req.query, txnRef);
+    if (signedReturn.hasSignedParams && !signedReturn.isValid) {
+      const error = new Error("Dữ liệu trả về từ VNPay không hợp lệ");
+      error.status = 400;
+      throw error;
+    }
+
+    const allowSignedReturn = signedReturn.hasSignedParams && signedReturn.isValid;
+    const isVnpaySuccess = allowSignedReturn && signedReturn.responseCode === "00";
+    const isVnpayFailed = allowSignedReturn && signedReturn.responseCode !== "00";
+
+    const isFinalPayment = txnRef.startsWith("O_");
+    const referenceId = isFinalPayment ? txnRef.slice(2) : txnRef;
+
+    if (!mongoose.Types.ObjectId.isValid(referenceId)) {
+      const error = new Error("Mã giao dịch không đúng định dạng");
+      error.status = 400;
+      throw error;
+    }
+
+    // --- TRƯỜNG HỢP 1: THANH TOÁN TỔNG BILL (FINAL PAYMENT) ---
+    if (isFinalPayment) {
+      const order = await Order.findOne({ _id: referenceId, is_deleted: false })
+        .populate("booking_id", "status start_time end_time")
+        .lean();
+
+      if (!order) {
+        const error = new Error("Không tìm thấy hóa đơn");
+        error.status = 404;
+        throw error;
+      }
+
+      ensureCanViewPayment(order.user_id, req.user, allowSignedReturn);
+
+      // Ưu tiên Success nếu DB đã update HOẶC URL VNPay báo thành công
+      let paymentStatus = order.payment_status;
+      let failureReason = null;
+
+      if (order.payment_status === "fully_paid" || isVnpaySuccess) {
+        paymentStatus = "fully_paid";
+      } else if (isVnpayFailed) {
+        paymentStatus = "failed";
+        failureReason = getFailureReason(signedReturn.responseCode);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Kiểm tra trạng thái thanh toán thành công",
+        data: {
+          txn_ref: txnRef,
+          order_id: order._id,
+          booking_id: order.booking_id?._id || order.booking_id,
+          payment_status: paymentStatus,
+          booking_status: order.booking_id?.status || null,
+          amount: order.final_amount_due,
+          deposit_paid: order.deposit_paid,
+          final_amount_due: order.final_amount_due,
+          total_court_fee: order.total_court_fee,
+          failure_reason: failureReason,
+        },
+      });
+    }
+
+    // --- TRƯỜNG HỢP 2: THANH TOÁN CỌC (DEPOSIT) --- 
+    const booking = await Booking.findOne({ _id: referenceId, is_deleted: false }).lean();
+    if (!booking) {
+      const error = new Error("Không tìm thấy lịch đặt sân");
+      error.status = 404;
+      throw error;
+    }
+
+    ensureCanViewPayment(booking.user_id, req.user, allowSignedReturn);
+
+    const order = await Order.findOne({
+      booking_id: booking._id,
+      is_deleted: false,
+    }).lean();
+
+    // Logic quan trọng: Nếu VNPay báo 00 và chữ ký khớp -> Ép trạng thái về deposit_paid
+    const isDepositPaid =
+      booking.status === "deposited" ||
+      ["deposit_paid", "pending_final", "fully_paid"].includes(order?.payment_status) ||
+      isVnpaySuccess;
+
+    let paymentStatus = order?.payment_status || "pending_deposit";
+    let failureReason = null;
+
+    if (isDepositPaid) {
+      paymentStatus = "deposit_paid";
+    } else if (isVnpayFailed) {
+      paymentStatus = "failed";
+      failureReason = getFailureReason(signedReturn.responseCode);
+    } else if (booking.status === "cancelled") {
+      paymentStatus = "failed";
+      failureReason = "Lịch giữ sân đã bị hủy hoặc hết hạn thanh toán.";
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Kiểm tra trạng thái thanh toán thành công",
+      data: {
+        txn_ref: txnRef,
+        order_id: order?._id || null,
+        booking_id: booking._id,
+        payment_status: paymentStatus,
+        booking_status: booking.status,
+        amount: isDepositPaid ? (order?.deposit_paid || booking.deposit_amount) : booking.deposit_amount,
+        deposit_paid: order?.deposit_paid || 0,
+        final_amount_due: order?.final_amount_due ?? booking.total_court_price,
+        total_court_fee: order?.total_court_fee ?? booking.total_court_price,
+        failure_reason: failureReason,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const vnpayIpn = async (req, res) => {
   let vnp_Params = req.query;
@@ -99,5 +301,6 @@ const vnpayReturn = (req, res) => {
 
 module.exports = {
   vnpayIpn,
-  vnpayReturn
+  vnpayReturn,
+  getPaymentStatus,
 };

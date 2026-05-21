@@ -11,13 +11,13 @@ const MyBookingPage = () => {
 
   // Lọc dữ liệu theo Tab: Sắp tới (chưa chơi) và Lịch sử (đã chơi/hủy)
   const filteredData = historyData.filter(item => {
-    if (tab === 'upcoming') return ['pending_deposit', 'deposited', 'playing'].includes(item.status);
+    if (tab === 'upcoming') return ['holding', 'pending_deposit', 'deposited', 'playing'].includes(item.status);
     return ['completed', 'cancelled'].includes(item.status);
   });
 
   const renderUserActions = (booking) => (
     <div className="flex justify-center">
-      {booking.status === 'pending_deposit' && (
+      {['holding', 'pending_deposit'].includes(booking.status) && (
         <Button 
           className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-4"
           onClick={() => window.location.href = `/payment/${booking._id}`}
@@ -52,10 +52,11 @@ const MyBookingPage = () => {
         </button>
       </div>
 
-      <BookingHistoryTable 
-        data={filteredData} 
-        isLoading={isLoading} 
-        renderActions={tab === 'upcoming' ? renderUserActions : null} 
+      <BookingHistoryTable
+        data={filteredData}
+        isLoading={isLoading}
+        showDepositColumn={false}
+        renderActions={tab === 'upcoming' ? renderUserActions : null}
       />
     </div>
     </MainLayout>

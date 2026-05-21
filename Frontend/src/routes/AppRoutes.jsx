@@ -11,6 +11,10 @@ import StaffBookingPage from "../pages/staff/StaffBookingPage";
 import CustomerBookingPage from "../pages/user/CustomerBookingPage";
 import MyBookingPage from "../pages/user/MyBookingPage";
 import StaffBookingHistoryPage from "../pages/staff/StaffBookingHistoryPage";
+import StaffCheckoutPage from "../pages/staff/StaffCheckoutPage";
+import StaffOrderDetailPage from "../pages/staff/StaffOrderDetailPage";
+import PaymentResultPage from "../pages/payment/PaymentResultPage";
+import PaymentRedirectPage from "../pages/payment/PaymentRedirectPage";
 
 //admin
 import AdminHome from "../pages/admin/AdminHome";
@@ -32,6 +36,15 @@ const AppRouteContent = () => {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/logout" element={<LogoutPage />} />
         <Route path="/booking" element={<CustomerBookingPage />} />
+        <Route path="/payment-result" element={<PaymentResultPage />} />
+        <Route
+          path="/payment/:bookingId"
+          element={
+            <ProtectedRoute>
+              <PaymentRedirectPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/profile"
           element={
@@ -56,8 +69,8 @@ const AppRouteContent = () => {
             </ProtectedRoute>
           }
         />
-      //STAFF
-              <Route
+        {/* STAFF */}
+        <Route
           path="/staff/booking"
           element={
             <ProtectedRoute roles={["staff"]}>
@@ -65,8 +78,16 @@ const AppRouteContent = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/staff/checkout/:bookingId"
+          element={
+            <ProtectedRoute roles={["staff"]}>
+              <StaffCheckoutPage />
+            </ProtectedRoute>
+          }
+        />
 
-        //ADMIN
+        {/* ADMIN */}
        
         <Route
           path="/admin/branches"
@@ -105,6 +126,14 @@ const AppRouteContent = () => {
             element={
               <ProtectedRoute roles={["admin", "staff"]}>
                 <StaffBookingHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders/:orderId"
+            element={
+              <ProtectedRoute roles={["admin", "staff"]}>
+                <StaffOrderDetailPage />
               </ProtectedRoute>
             }
           />

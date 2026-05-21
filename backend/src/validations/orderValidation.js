@@ -10,6 +10,7 @@ const objectId = (value, helpers) => {
 const getOrders = {
   query: Joi.object().keys({
     branch_id: Joi.string().custom(objectId),
+    booking_id: Joi.string().custom(objectId),
     date: Joi.string().pattern(/^\d{2}-\d{2}-\d{4}$/).allow(''), 
     payment_status: Joi.string().valid('deposit_paid', 'pending_final', 'fully_paid').allow(''),
     page: Joi.number().integer().min(1).default(1),
@@ -20,6 +21,12 @@ const getOrders = {
 const getOrderDetail = {
   params: Joi.object().keys({
     id: Joi.string().custom(objectId).required(),
+  }),
+};
+
+const ensureOrderForBooking = {
+  params: Joi.object().keys({
+    bookingId: Joi.string().custom(objectId).required(),
   }),
 };
 
@@ -72,6 +79,7 @@ const checkoutOrder = {
 module.exports = {
   getOrders,
   getOrderDetail,
+  ensureOrderForBooking,
   payDeposit,
   addPosItems,
   updatePosItem,

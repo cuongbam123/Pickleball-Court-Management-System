@@ -10,6 +10,12 @@ const router = express.Router();
 
 router.use(authenticate);
 
+router.post(
+  '/by-booking/:bookingId/ensure',
+  authorizeRoles("admin", "staff"),
+  validate(orderValidation.ensureOrderForBooking),
+  orderController.ensureOrderForBooking
+);
 
 router.post(
   '/:id/pay-deposit',
