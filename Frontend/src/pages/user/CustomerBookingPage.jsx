@@ -6,6 +6,7 @@ import { useBookingPage } from "../../features/booking/hooks/useBookingPage";
 import { useTimeGrid } from "../../features/booking/hooks/useTimeGrid";
 import { toast } from "react-toastify";
 import dayjs from "dayjs";
+import Spiral from "../../components/ui/Spiral";
 
 const CustomerBookingPage = () => {
   const {
@@ -129,7 +130,10 @@ const CustomerBookingPage = () => {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-xl font-bold mb-4 text-slate-800">Tất cả sân trên hệ thống</h2>
             {isLoadingCourts ? (
-              <div className="text-center text-slate-500 py-10">Đang tải danh sách sân...</div>
+              <div className="flex flex-col items-center justify-center py-10 gap-3">
+                <Spiral size="md" className="text-blue-600" />
+                <span className="text-sm text-slate-500">Đang tải danh sách sân...</span>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {courtsList.map((court) => (

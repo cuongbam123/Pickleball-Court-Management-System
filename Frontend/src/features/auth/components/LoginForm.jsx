@@ -102,7 +102,7 @@ const LoginForm = () => {
       }
     } catch (err) {
       console.error("LOGIN ERROR:", err);
-      alert(err?.message || "Đăng nhập thất bại");
+      alert(err?.response?.data?.message || err?.message || "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }

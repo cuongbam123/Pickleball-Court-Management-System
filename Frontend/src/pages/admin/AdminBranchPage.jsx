@@ -7,8 +7,10 @@ import { useBranches } from "../../features/facility/hooks/useBranches";
 import BranchModal from "../../features/facility/components/BranchModal";
 import clsx from "clsx";
 import { LayoutGrid, Table2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const AdminBranchPage = () => {
+  const navigate = useNavigate();
   const { branches, isLoading, deleteBranch, createBranch, updateBranch } =
     useBranches();
 
@@ -17,7 +19,18 @@ const AdminBranchPage = () => {
   const [viewMode, setViewMode] = useState("table");
   // Định nghĩa các cột cho Table component
   const columns = [
-    { header: "Tên chi nhánh", accessor: "name" },
+    {
+      header: "Tên chi nhánh",
+      render: (item) => (
+        <button
+          onClick={() => navigate(`/admin/courts?branchId=${item._id}`)}
+          className="font-bold text-slate-900 dark:text-slate-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors text-left"
+          title="Xem danh sách sân của chi nhánh này"
+        >
+          {item.name}
+        </button>
+      ),
+    },
     { header: "Địa chỉ", accessor: "address" },
     { header: "Hotline", accessor: "hotline" },
     {
@@ -49,7 +62,13 @@ const AdminBranchPage = () => {
   const renderBranchCard = (branch) => (
     <div className="flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="font-bold text-lg text-gray-900 dark:text-white">{branch.name}</h3>
+        <h3
+          className="font-bold text-lg text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
+          onClick={() => navigate(`/admin/courts?branchId=${branch._id}`)}
+          title="Xem danh sách sân của chi nhánh này"
+        >
+          {branch.name}
+        </h3>
         <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
           Hoạt động
         </span>
@@ -72,14 +91,20 @@ const AdminBranchPage = () => {
 
       <div className="mt-auto flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-slate-700">
         <button
+          onClick={() => navigate(`/admin/courts?branchId=${branch._id}`)}
+          className="rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-200 dark:hover:bg-blue-500/30 transition-colors"
+        >
+          Xem sân
+        </button>
+        <button
           onClick={() => handleOpenEdit(branch)}
-          className="rounded-lg px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100"
+          className="rounded-lg px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           Chỉnh sửa
         </button>
         <button
           onClick={() => deleteBranch(branch._id)}
-          className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-200 dark:hover:bg-red-500/30"
+          className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 dark:bg-red-500/20 dark:text-red-200 dark:hover:bg-red-500/30 transition-colors"
         >
           Xóa
         </button>

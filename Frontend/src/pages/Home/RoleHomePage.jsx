@@ -4,15 +4,15 @@ import { useAuth } from "../../hooks/useAuth";
 import UserHome from "../user/UserHome";
 import StaffHome from "../staff/StaffHome";
 import AdminHome from "../admin/AdminHome";
-import SkeletonLoader from "../../components/ui/SkeletonLoader";
+import Spiral from "../../components/ui/Spiral";
 
 const RoleHomePage = () => {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-lg p-8" aria-busy="true" aria-label="Đang tải">
-        <SkeletonLoader variant="text" count={4} />
+      <div className="flex min-h-[60vh] items-center justify-center p-8">
+        <Spiral size="lg" className="text-blue-600" />
       </div>
     );
   }
