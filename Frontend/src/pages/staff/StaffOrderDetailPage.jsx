@@ -8,10 +8,10 @@ import { useOrderDetail } from "../../features/order/hooks/useOrderDetail";
 import {
   ArrowLeft,
   AlertTriangle,
-  Loader2,
   ReceiptText,
   CheckCircle2,
 } from "lucide-react";
+import Spiral from "../../components/ui/Spiral";
 
 const formatCurrency = (amount) =>
   new Intl.NumberFormat("vi-VN", {
@@ -74,7 +74,7 @@ const StaffOrderDetailPage = () => {
     return (
       <StaffLayout>
         <div className="flex h-[60vh] flex-col items-center justify-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Spiral size="lg" className="text-blue-600" />
           <p className="font-medium text-slate-500">Đang tải hóa đơn...</p>
         </div>
       </StaffLayout>

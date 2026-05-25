@@ -10,7 +10,6 @@ import {
   CreditCard, 
   ReceiptText, 
   Banknote,
-  Loader2,
   RefreshCw,
   Plus,
   Minus,
@@ -18,6 +17,7 @@ import {
   Search,
   ShoppingBag,
 } from "lucide-react";
+import Spiral from "../../components/ui/Spiral";
 
 const PRODUCT_TYPE_OPTIONS = [
   { value: "", label: "Tất cả loại" },
@@ -176,7 +176,7 @@ const StaffCheckoutPage = () => {
     return (
       <StaffLayout>
         <div className="flex h-[60vh] items-center justify-center flex-col gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <Spiral size="lg" className="text-blue-600" />
           <p className="text-slate-500 font-medium">Đang tải thông tin hóa đơn...</p>
         </div>
       </StaffLayout>
@@ -292,9 +292,9 @@ const StaffCheckoutPage = () => {
                 )}
 
                 {isLoadingProducts ? (
-                  <div className="flex items-center justify-center gap-2 py-8 text-slate-500">
-                    <Loader2 className="h-5 w-5 animate-spin text-emerald-600" />
-                    Đang tải sản phẩm...
+                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-slate-500">
+                    <Spiral size="sm" className="text-emerald-600" />
+                    <span className="text-xs">Đang tải sản phẩm...</span>
                   </div>
                 ) : products.length === 0 ? (
                   <p className="py-6 text-center text-sm text-slate-500">

@@ -5,13 +5,13 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  Loader2,
   RefreshCw,
   ReceiptText,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { usePaymentResult } from "../../features/payment/hooks/usePaymentResult";
 import { getBookingHistoryPathByRole } from "../../features/payment/utils/paymentReturnUrl";
+import Spiral from "../../components/ui/Spiral";
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("vi-VN", {
@@ -74,11 +74,9 @@ const PaymentResultPage = () => {
   if (status === "loading") {
     return (
       <ResultShell>
-        <div className="flex flex-col items-center text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
-          <h1 className="mt-6 text-2xl font-bold text-slate-900">
+        <div className="flex flex-col items-center text-center py-6">
+          <Spiral size="lg" className="text-blue-600 mb-6" />
+          <h1 className="text-2xl font-bold text-slate-900">
             Đang xác thực giao dịch...
           </h1>
         </div>

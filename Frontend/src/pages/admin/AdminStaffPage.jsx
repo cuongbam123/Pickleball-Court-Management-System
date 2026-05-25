@@ -151,13 +151,15 @@ const AdminStaffPage = () => {
           >
             Chỉnh sửa
           </button>
-          <button
-            type="button"
-            onClick={() => openDeleteModal(item._id)}
-            className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
-          >
-            Xóa
-          </button>
+          {currentUser?.role === "admin" && (
+            <button
+              type="button"
+              onClick={() => openDeleteModal(item._id)}
+              className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
+            >
+              Xóa
+            </button>
+          )}
         </div>
       ),
     },
@@ -198,13 +200,15 @@ const AdminStaffPage = () => {
         >
           Chỉnh sửa
         </button>
-        <button
-          type="button"
-          onClick={() => openDeleteModal(user._id)}
-          className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
-        >
-          Xóa
-        </button>
+        {currentUser?.role === "admin" && (
+          <button
+            type="button"
+            onClick={() => openDeleteModal(user._id)}
+            className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100"
+          >
+            Xóa
+          </button>
+        )}
       </div>
     </div>
   );
@@ -283,18 +287,18 @@ const AdminStaffPage = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white p-4 rounded-2xl border shadow-sm flex items-end gap-4">
-        <SelectFilter
-          label="Lọc theo chi nhánh"
-          options={Object.entries(branchNames).map(([id, name]) => ({
-            value: id,
-            label: name,
-          }))}
-          value={selectedBranch}
-          onChange={handleBranchChange}
-          className="w-64 px-3 py-2 border border-gray-200 rounded-md text-gray-700 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 shadow-sm hover:shadow-md transition-shadow"
-          placeholder="Tất cả chi nhánh"
-        />
+        <div className="flex flex-wrap items-end gap-5 rounded-2xl border border-slate-200/80 bg-white/80 p-5 shadow-sm dark:border-slate-800/80 dark:bg-slate-900/80 backdrop-blur-sm">
+          <SelectFilter
+            label="Lọc theo chi nhánh"
+            options={Object.entries(branchNames).map(([id, name]) => ({
+              value: id,
+              label: name,
+            }))}
+            value={selectedBranch}
+            onChange={handleBranchChange}
+            className="w-64"
+            placeholder="Tất cả chi nhánh"
+          />
         </div>
 
         <Table

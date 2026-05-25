@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import MainLayout from "../../layouts/MainLayout";
 import { createDepositPaymentUrl } from "../../features/payment/api/paymentApi";
 import { getPaymentResultReturnUrl } from "../../features/payment/utils/paymentReturnUrl";
+import Spiral from "../../components/ui/Spiral";
 
 const PaymentRedirectPage = () => {
   const { bookingId } = useParams();
@@ -67,8 +68,8 @@ const PaymentRedirectPage = () => {
             </>
           ) : (
             <>
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                <Loader2 className="h-8 w-8 animate-spin" />
+              <div className="mx-auto flex h-16 w-16 items-center justify-center">
+                <Spiral size="lg" className="text-blue-600" />
               </div>
               <h1 className="mt-5 text-xl font-bold text-slate-900">
                 Đang tạo link thanh toán...

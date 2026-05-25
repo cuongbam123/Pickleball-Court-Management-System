@@ -8,8 +8,23 @@ import { useCourts } from "../../features/facility/hooks/useCourts";
 import clsx from "clsx";
 import { LayoutGrid, Table2 } from "lucide-react";
 
+import { useSearchParams } from "react-router-dom";
+
 const AdminCourtPage = () => {
-  const [selectedBranchFilter, setSelectedBranchFilter] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedBranchFilter, setSelectedBranchFilter] = useState(
+    searchParams.get("branchId") || ""
+  );
+
+  const handleBranchFilterChange = (value) => {
+    setSelectedBranchFilter(value);
+    if (value) {
+      setSearchParams({ branchId: value });
+    } else {
+      setSearchParams({});
+    }
+  };
+
   const {
     courts,
     branches,
@@ -222,7 +237,7 @@ const AdminCourtPage = () => {
             label="Lọc theo chi nhánh"
             options={branches.map((b) => ({ label: b.name, value: b._id }))}
             value={selectedBranchFilter}
-            onChange={setSelectedBranchFilter}
+            onChange={handleBranchFilterChange}
             placeholder="Tất cả chi nhánh"
             className="w-64"
           />

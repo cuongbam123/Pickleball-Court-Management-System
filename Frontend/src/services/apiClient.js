@@ -59,9 +59,7 @@ apiClient.interceptors.response.use(
 
     // 403 – Không có quyền truy cập
     if (status === 403) {
-      toast.error("Không có quyền truy cập.");
-      clearAuth();
-      window.location.href = "/login";
+      toast.error("Bạn không có quyền thực hiện hành động này.");
       return Promise.reject(error);
     }
 
@@ -71,8 +69,13 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Không phải 401
-    if (status !== 401 || originalRequest._retry) {
+    // Không phải 401 hoặc các endpoint đăng nhập/đăng ký
+    if (
+      status !== 401 ||
+      originalRequest._retry ||
+      originalRequest?.url?.includes("/auth/login") ||
+      originalRequest?.url?.includes("/auth/register")
+    ) {
       return Promise.reject(error);
     }
 

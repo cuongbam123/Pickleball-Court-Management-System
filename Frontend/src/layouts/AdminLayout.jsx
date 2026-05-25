@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Menu, X } from "lucide-react";
 import Sidebar from "../../src/components/layout/Sidebar";
 import { useThemeMode } from "../hooks/useThemeMode";
+import { useAuthStore } from "../store/authStore";
 
 const adminItems = [
   { label: "Tổng quan", to: "/home" },
@@ -17,13 +18,22 @@ const AdminLayout = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { isDarkMode, toggleTheme } = useThemeMode();
+  const user = useAuthStore((state) => state.user);
+  const userRole = user?.role || "customer";
+
+  const allowedItems = adminItems.filter((item) => {
+    if (userRole === "manager") {
+      return ["/home", "/admin/staff", "/admin/users"].includes(item.to);
+    }
+    return true;
+  });
 
   return (
     <div className="flex min-h-screen bg-transparent dark:bg-slate-950">
       {/* Sidebar desktop */}
       <div className="hidden lg:block">
         <Sidebar
-          items={adminItems}
+          items={allowedItems}
           collapsed={isCollapsed}
           onToggleCollapse={() => setIsCollapsed((prev) => !prev)}
           isDarkMode={isDarkMode}
@@ -56,7 +66,7 @@ const AdminLayout = ({ children }) => {
         </div>
 
         <Sidebar
-          items={adminItems}
+          items={allowedItems}
           onItemClick={() => setIsOpen(false)}
           isDarkMode={isDarkMode}
           onToggleTheme={toggleTheme}
