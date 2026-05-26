@@ -14,6 +14,7 @@ const CustomerBookingPage = lazy(() => import("../pages/user/CustomerBookingPage
 const MyBookingPage = lazy(() => import("../pages/user/MyBookingPage"));
 const StaffBookingHistoryPage = lazy(() => import("../pages/staff/StaffBookingHistoryPage"));
 const StaffCheckoutPage = lazy(() => import("../pages/staff/StaffCheckoutPage"));
+const StaffPosProductsPage = lazy(() => import("../pages/staff/StaffPosProductsPage"));
 const StaffOrderDetailPage = lazy(() => import("../pages/staff/StaffOrderDetailPage"));
 const PaymentResultPage = lazy(() => import("../pages/payment/PaymentResultPage"));
 const PaymentRedirectPage = lazy(() => import("../pages/payment/PaymentRedirectPage"));
@@ -87,6 +88,22 @@ const AppRouteContent = () => {
             element={
               <ProtectedRoute roles={["admin", "staff"]}>
                 <StaffCheckoutPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute roles={["admin", "staff"]}>
+                <StaffPosProductsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pos"
+            element={
+              <ProtectedRoute roles={["admin", "staff"]}>
+                <StaffPosProductsPage />
               </ProtectedRoute>
             }
           />
