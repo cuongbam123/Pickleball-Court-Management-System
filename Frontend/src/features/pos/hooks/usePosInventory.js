@@ -147,47 +147,17 @@ export const usePosInventory = () => {
     setIsProductModalOpen(true);
   };
 
-  const validateProductForm = () => {
-    const errors = {};
-    if (!productFormData.name || !productFormData.name.trim()) {
-      errors.name = "Tên sản phẩm không được trống";
-    } else if (productFormData.name.trim().length < 2) {
-      errors.name = "Tên sản phẩm phải từ 2 ký tự trở lên";
-    }
-
-    if (!productFormData.type) {
-      errors.type = "Vui lòng chọn loại sản phẩm";
-    }
-
-    if (productFormData.price === "" || productFormData.price === null) {
-      errors.price = "Giá bán không được trống";
-    } else if (Number(productFormData.price) < 0) {
-      errors.price = "Giá bán không được nhỏ hơn 0";
-    }
-
-    if (productModalMode === "create") {
-      if (productFormData.stock === "" || productFormData.stock === null) {
-        errors.stock = "Tồn kho ban đầu không được trống";
-      } else if (Number(productFormData.stock) < 0) {
-        errors.stock = "Tồn kho không được nhỏ hơn 0";
-      }
-    }
-
-    setProductFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleProductSubmit = async () => {
-    if (!validateProductForm()) return;
-
     try {
       setIsProductSubmitting(true);
+      setProductFormErrors({});
+
       const payload = {
         branch_id: selectedBranchId,
-        name: productFormData.name.trim(),
+        name: productFormData.name ? productFormData.name.trim() : "",
         type: productFormData.type,
-        price: Number(productFormData.price),
-        ...(productModalMode === "create" ? { stock: Number(productFormData.stock) } : {}),
+        price: productFormData.price === "" ? undefined : Number(productFormData.price),
+        ...(productModalMode === "create" ? { stock: productFormData.stock === "" ? undefined : Number(productFormData.stock) } : {}),
       };
 
       if (productModalMode === "create") {
@@ -208,9 +178,7 @@ export const usePosInventory = () => {
       console.error("Lỗi lưu sản phẩm:", error);
       const msg = error?.response?.data?.message || "Lỗi xử lý yêu cầu.";
       toast.error(msg);
-      if (error?.response?.data?.error_code === "ERR_PRODUCT_DUPLICATE") {
-        setProductFormErrors({ name: "Tên sản phẩm này đã tồn tại trong chi nhánh." });
-      }
+      setProductFormErrors({ general: msg });
     } finally {
       setIsProductSubmitting(false);
     }
@@ -258,38 +226,18 @@ export const usePosInventory = () => {
     setAdjustFormErrors({});
   };
 
-  const validateAdjustForm = () => {
-    const errors = {};
-    const amount = Number(adjustFormData.amount);
-
-    if (!adjustFormData.amount || adjustFormData.amount === "") {
-      errors.amount = "Vui lòng nhập số lượng";
-    } else if (isNaN(amount) || amount <= 0 || !Number.isInteger(amount)) {
-      errors.amount = "Số lượng phải là số nguyên lớn hơn 0";
-    } else if (adjustFormData.type === "out" && amount > (selectedProduct?.stock || 0)) {
-      errors.amount = `Số lượng xuất (${amount}) không được vượt quá số tồn kho hiện tại (${selectedProduct?.stock || 0})`;
-    }
-
-    if (!adjustFormData.reason) {
-      errors.reason = "Vui lòng chọn lý do biến động";
-    }
-
-    setAdjustFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
   const handleAdjustSubmit = async () => {
-    if (!validateAdjustForm()) return;
-
     try {
       setIsAdjustSubmitting(true);
+      setAdjustFormErrors({});
+
       const amount = Number(adjustFormData.amount);
       const changeAmount = adjustFormData.type === "in" ? amount : -amount;
 
       await adjustStock(selectedProduct._id, {
-        change_amount: changeAmount,
+        change_amount: isNaN(changeAmount) ? undefined : changeAmount,
         reason: adjustFormData.reason,
-        note: adjustFormData.note.trim() || undefined,
+        note: adjustFormData.note ? adjustFormData.note.trim() : undefined,
       });
 
       toast.success(
@@ -299,14 +247,21 @@ export const usePosInventory = () => {
       fetchProductsList();
     } catch (error) {
       console.error("Lỗi điều chỉnh tồn kho:", error);
-      toast.error(error?.response?.data?.message || "Không thể thực hiện điều chỉnh tồn kho.");
+      const msg = error?.response?.data?.message || "Không thể thực hiện điều chỉnh tồn kho.";
+      toast.error(msg);
+      setAdjustFormErrors({ general: msg });
     } finally {
       setIsAdjustSubmitting(false);
     }
   };
 
+  const isManagerOrAdmin = useMemo(() => {
+    return user?.role === "admin" || user?.role === "manager";
+  }, [user]);
+
   return {
     isAdmin,
+    isManagerOrAdmin,
     branches,
     isLoadingBranches,
     selectedBranchId,

@@ -78,7 +78,7 @@ const AppRouteContent = () => {
           <Route
             path="/staff/booking"
             element={
-              <ProtectedRoute roles={["admin", "staff"]}>
+              <ProtectedRoute roles={["admin", "manager", "staff"]}>
                 <StaffBookingPage />
               </ProtectedRoute>
             }
@@ -86,7 +86,7 @@ const AppRouteContent = () => {
           <Route
             path="/staff/checkout/:bookingId"
             element={
-              <ProtectedRoute roles={["admin", "staff"]}>
+              <ProtectedRoute roles={["admin", "manager", "staff"]}>
                 <StaffCheckoutPage />
               </ProtectedRoute>
             }
@@ -94,15 +94,7 @@ const AppRouteContent = () => {
           <Route
             path="/pos"
             element={
-              <ProtectedRoute roles={["admin", "staff"]}>
-                <StaffPosProductsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/pos"
-            element={
-              <ProtectedRoute roles={["admin", "staff"]}>
+              <ProtectedRoute roles={["admin", "manager", "staff"]}>
                 <StaffPosProductsPage />
               </ProtectedRoute>
             }
@@ -145,7 +137,7 @@ const AppRouteContent = () => {
             <Route
               path="/admin/booking-history"
               element={
-                <ProtectedRoute roles={["admin", "staff"]}>
+                <ProtectedRoute roles={["admin", "manager", "staff"]}>
                   <StaffBookingHistoryPage />
                 </ProtectedRoute>
               }
@@ -153,7 +145,7 @@ const AppRouteContent = () => {
             <Route
               path="/admin/orders/:orderId"
               element={
-                <ProtectedRoute roles={["admin", "staff"]}>
+                <ProtectedRoute roles={["admin", "manager", "staff"]}>
                   <StaffOrderDetailPage />
                 </ProtectedRoute>
               }

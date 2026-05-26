@@ -19,29 +19,29 @@ router.use(authenticate);
 router.get("/", validate(getProducts), productController.getProducts);
 router.get("/:id", validate(getProductById), productController.getProductById);
 
-//staff va admin
+//staff va admin doc, nhung chi admin va manager duoc dieu chinh kho
 router.post(
   "/:id/adjust-stock",
-  authorizeRoles("admin", "staff"),
+  authorizeRoles("admin", "manager"),
   validate(adjustStock),
   productController.adjustStock,
 );
-//admin, manager va staff
+//admin va manager CRUD san pham
 router.post(
   "/",
-  authorizeRoles("admin", "manager", "staff"),
+  authorizeRoles("admin", "manager"),
   validate(createProduct),
   productController.createProduct,
 );
 router.put(
   "/:id",
-  authorizeRoles("admin", "manager", "staff"),
+  authorizeRoles("admin", "manager"),
   validate(updateProduct),
   productController.updateProduct,
 );
 router.delete(
   "/:id",
-  authorizeRoles("admin", "manager", "staff"),
+  authorizeRoles("admin", "manager"),
   validate(deleteProduct),
   productController.deleteProduct,
 );
