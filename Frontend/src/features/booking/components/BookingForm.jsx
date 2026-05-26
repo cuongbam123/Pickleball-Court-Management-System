@@ -216,89 +216,118 @@ const BookingForm = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 sticky top-4">
-      <h3 className="text-lg font-bold text-slate-800 mb-4 border-l-4 border-orange-400 pl-2">
-        Đặt sân theo yêu cầu
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sticky top-20 hover:shadow-[0_4px_16px_rgba(0,0,0,0.1)] transition-all duration-300">
+      <h3 className="text-base font-extrabold text-[#064e3b] mb-5 border-l-4 border-lime-400 pl-3 uppercase tracking-wider font-sans">
+        Đặt sân trực tuyến
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Họ và tên (Cho sửa) */}
-        <input
-          required
-          type="text"
-          name="name"
-          placeholder="Họ và tên"
-          value={formData.name}
-          onChange={handleChange}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
-        />
-        {/* Email (KHÔNG cho sửa) */}
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          value={formData.email}
-          readOnly
-          className="w-full rounded-lg border border-slate-300 bg-slate-100 text-slate-500 px-3 py-2 outline-none cursor-not-allowed"
-          title="Không thể chỉnh sửa Email"
-        />
-        {/* Số điện thoại (Cho sửa) */}
-        <input
-          required
-          type="text"
-          name="phone"
-          placeholder="Số điện thoại"
-          value={formData.phone}
-          onChange={handleChange}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
-        />
-        {/* Chọn ngày và giờ (Tự động điền từ Lưới) */}
-        <div className="flex gap-2">
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Họ và tên</label>
           <input
+            required
             type="text"
-            readOnly
-            value={dayjs(selectedDate).format("DD/MM/YYYY")}
-            className="w-1/2 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 outline-none"
-          />
-          <input
-            type="text"
-            readOnly
-            value={mergedTime} // Hiển thị giờ đã ghép (VD: 17:00 - 19:00)
-            className="w-1/2 rounded-lg border border-slate-300 bg-blue-50 px-3 py-2 outline-none text-blue-700 font-bold text-center"
-            placeholder="Chọn giờ"
+            name="name"
+            placeholder="Họ và tên người chơi"
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-black outline-none transition-all focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20"
           />
         </div>
+
+        {/* Email (KHÔNG cho sửa) */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Email liên hệ</label>
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={formData.email}
+            readOnly
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 text-slate-400 px-3.5 py-2.5 text-sm outline-none cursor-not-allowed"
+            title="Không thể chỉnh sửa Email"
+          />
+        </div>
+
+        {/* Số điện thoại (Cho sửa) */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Số điện thoại</label>
+          <input
+            required
+            type="text"
+            name="phone"
+            placeholder="Số điện thoại liên hệ"
+            value={formData.phone}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm text-black outline-none transition-all focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20"
+          />
+        </div>
+
+        {/* Chọn ngày và giờ (Tự động điền từ Lưới) */}
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Thời gian đặt</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={dayjs(selectedDate).format("DD/MM/YYYY")}
+              className="w-1/2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none text-slate-600 font-medium text-center"
+            />
+            <input
+              type="text"
+              readOnly
+              value={mergedTime} // Hiển thị giờ đã ghép (VD: 17:00 - 19:00)
+              className="w-1/2 rounded-lg border border-lime-400/30 bg-lime-400/10 px-3 py-2.5 text-sm outline-none text-[#064e3b] font-bold text-center"
+              placeholder="Chọn giờ"
+            />
+          </div>
+        </div>
+
         {/* Thời lượng */}
         {durationHours > 0 && (
-          <div className="flex justify-between items-center bg-green-50 text-green-700 p-4 rounded-xl border border-green-200 shadow-sm mt-4">
-            <span className="font-medium">Tổng tiền sân:</span>
-            <span className="text-xl font-bold">
-              {estimatedPrice.toLocaleString("vi-VN")} VNĐ
+          <div className="flex justify-between items-center bg-[#064e3b] text-white p-4 rounded-xl border border-emerald-950 mt-4 shadow-sm">
+            <span className="font-semibold text-sm">Tổng tiền sân ({durationHours}h):</span>
+            <span className="text-lg font-black text-lime-400">
+              {estimatedPrice.toLocaleString("vi-VN")} đ
             </span>
           </div>
         )}
-        <div className="flex justify-between items-center bg-green-50 text-green-700 p-3 rounded-lg border border-green-200 mt-2">
-          <span className="font-medium">Giá cọc:</span>
-          <span className="text-xl font-bold">
-            {(estimatedPrice / 2).toLocaleString("vi-VN")} VNĐ
+        
+        <div className="flex justify-between items-center bg-lime-400/10 text-emerald-950 p-4 rounded-xl border border-lime-400/20 mt-2">
+          <span className="font-bold text-sm">Tiền cọc cần trả (50%):</span>
+          <span className="text-lg font-black text-[#064e3b]">
+            {(estimatedPrice / 2).toLocaleString("vi-VN")} đ
           </span>
         </div>
+
         {/* Ghi chú */}
-        <textarea
-          name="note"
-          rows="3"
-          placeholder="Ghi chú"
-          value={formData.note}
-          onChange={handleChange}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-blue-500"
-        ></textarea>
-        <Button
+        <div>
+          <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Ghi chú thêm</label>
+          <textarea
+            name="note"
+            rows="2"
+            placeholder="Yêu cầu đặc biệt (nếu có)..."
+            value={formData.note}
+            onChange={handleChange}
+            className="w-full rounded-lg border border-slate-200 px-3.5 py-2 text-sm text-black outline-none transition focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20"
+          ></textarea>
+        </div>
+
+        <button
           type="submit"
-          loading={isSubmitting}
-          className="w-full bg-blue-200 text-blue-800 hover:bg-blue-300 font-bold py-3 rounded-xl transition-colors"
+          disabled={isSubmitting}
+          className="w-full bg-[#064e3b] text-lime-400 hover:bg-lime-400 hover:text-emerald-950 font-black py-3.5 rounded-xl transition-all duration-300 shadow-md hover:shadow-xl hover:-translate-y-0.5 text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? "Đang xử lý..." : "Đặt sân"}
-        </Button>
+          {isSubmitting ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              <span>Đang xử lý...</span>
+            </>
+          ) : (
+            <span>Xác nhận đặt sân</span>
+          )}
+        </button>
       </form>
     </div>
   );

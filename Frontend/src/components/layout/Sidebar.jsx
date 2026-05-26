@@ -134,7 +134,7 @@ const Sidebar = ({
                 "mb-1.5 flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200",
                 collapsed ? "justify-center gap-0" : "gap-2",
                 isActive
-                  ? "bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200 dark:bg-blue-500/20 dark:text-blue-200 dark:ring-blue-400/20"
+                  ? "bg-emerald-50 text-[#064e3b] shadow-sm ring-1 ring-emerald-100 dark:bg-emerald-950/20 dark:text-lime-400 dark:ring-lime-450/20"
                   : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white",
               )}
               title={collapsed ? item.label : undefined}
@@ -142,7 +142,7 @@ const Sidebar = ({
               <span
                 className={clsx(
                   "h-2.5 w-2.5 rounded-full transition",
-                  isActive ? "bg-blue-500" : "bg-slate-300 dark:bg-slate-500",
+                  isActive ? "bg-[#064e3b] dark:bg-lime-400" : "bg-slate-300 dark:bg-slate-500",
                 )}
               />
               {!collapsed ? item.label : null}
