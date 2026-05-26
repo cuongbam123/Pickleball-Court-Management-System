@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import useBookingHistory from '../../features/booking/hooks/useBookingHistory';
 import BookingHistoryTable from '../../features/booking/components/BookingHistoryTable';
 import MainLayout from "../../layouts/MainLayout"; 
@@ -33,31 +35,46 @@ const MyBookingPage = () => {
 
   return (
     <MainLayout>
-    <div className="max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Lịch sử đặt sân của tôi</h1>
+    <div className="mx-auto w-full max-w-[95%] lg:max-w-[90%] space-y-6 px-4 py-8 font-sans">
+      
+      {/* Title with Back Button */}
+      <div className="flex items-center gap-3">
+        <Link
+          to="/profile"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-[#064e3b] hover:border-lime-400 shadow-sm transition-all hover:scale-105"
+          title="Quay lại Hồ sơ"
+        >
+          <ArrowLeft size={20} />
+        </Link>
+        <h1 className="text-3xl font-black text-[#064e3b] uppercase tracking-wide">
+          Lịch sử đặt sân của tôi
+        </h1>
+      </div>
 
       {/* Tabs điều hướng */}
       <div className="flex border-b border-slate-200">
         <button 
-          className={`px-6 py-3 text-sm font-medium ${tab === 'upcoming' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`}
+          className={`px-6 py-3 text-sm font-semibold transition-colors duration-250 cursor-pointer ${tab === 'upcoming' ? 'border-b-2 border-[#064e3b] text-[#064e3b]' : 'text-slate-500 hover:text-[#064e3b]'}`}
           onClick={() => setTab('upcoming')}
         >
           Sắp tới
         </button>
         <button 
-          className={`px-6 py-3 text-sm font-medium ${tab === 'past' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-slate-500'}`}
+          className={`px-6 py-3 text-sm font-semibold transition-colors duration-250 cursor-pointer ${tab === 'past' ? 'border-b-2 border-[#064e3b] text-[#064e3b]' : 'text-slate-500 hover:text-[#064e3b]'}`}
           onClick={() => setTab('past')}
         >
           Lịch sử chơi
         </button>
       </div>
 
-      <BookingHistoryTable
-        data={filteredData}
-        isLoading={isLoading}
-        showDepositColumn={false}
-        renderActions={tab === 'upcoming' ? renderUserActions : null}
-      />
+      <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-slate-100 p-6 overflow-hidden">
+        <BookingHistoryTable
+          data={filteredData}
+          isLoading={isLoading}
+          showDepositColumn={false}
+          renderActions={tab === 'upcoming' ? renderUserActions : null}
+        />
+      </div>
     </div>
     </MainLayout>
   );

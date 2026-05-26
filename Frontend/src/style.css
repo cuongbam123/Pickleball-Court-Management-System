@@ -1,30 +1,36 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-primary-dark: #003D20;
+  --color-primary-action: #69F0AE;
+  --color-primary-light: #B9F6CA;
+  --color-success-green: #00C853;
+  --font-sans: "Montserrat", sans-serif;
+}
+
 :root {
-  --pb-accent: #3b82f6;
-  --pb-accent-strong: #2563eb;
-  --pb-bg: #f3f6fb;
-  --pb-surface: #ffffff;
-  --pb-text: #0f172a;
-  --pb-muted: #64748b;
-  --pb-border: #e2e8f0;
+  --pb-accent: #69F0AE;
+  --pb-accent-strong: #00C853;
+  --pb-bg: #FFFFFF;
+  --pb-surface: #FFFFFF;
+  --pb-text: #000000;
+  --pb-muted: #666666;
+  --pb-border: #E0E0E0;
 }
 
 body {
-  background: radial-gradient(circle at top right, #eef4ff 0%, #f5f8ff 34%, var(--pb-bg) 72%);
-  color: var(--pb-text);
+  font-family: "Montserrat", sans-serif;
+  background-color: #FFFFFF;
+  color: #000000;
+  line-height: 1.5;
   transition: background 0.25s ease, color 0.25s ease;
   color-scheme: light;
 }
 
-#app {
-  min-height: 100vh;
-}
-
 .dark body {
-  background: radial-gradient(circle at top right, #23291d 0%, #111827 30%, #020617 72%);
-  color: #e2e8f0;
+  background-color: #0c120e;
+  color: #E2E8F0;
   color-scheme: dark;
 }
 

@@ -4,6 +4,7 @@ import useBookingHistory from '../../features/booking/hooks/useBookingHistory';
 import BookingHistoryTable from '../../features/booking/components/BookingHistoryTable';
 import StaffLayout from '../../layouts/StaffLayout';
 import { getOrders } from '../../features/order/api/orderApi';
+import { MapPin, Sparkles, Calendar, Activity, ChevronDown } from 'lucide-react';
 
 const StaffBookingHistoryPage = () => {
   const navigate = useNavigate();
@@ -125,92 +126,125 @@ const StaffBookingHistoryPage = () => {
   // 4. VẼ GIAO DIỆN TRANG CHÍNH
   return (
     <StaffLayout>
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
-      
-      {/* Box Tiêu đề & Thanh Công Cụ Lọc */}
-      <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-4">
-      <h1 className="text-2xl font-bold text-slate-800">Quản lý Đặt sân</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="mx-auto w-full max-w-[95%] lg:max-w-[90%] px-4 py-8 font-sans space-y-8 bg-transparent">
         
-        {/* 1. MAP DATA CHI NHÁNH VÀO DROPDOWN */}
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-600">Chi nhánh</label>
-          <select
-            className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white disabled:bg-slate-100 disabled:text-slate-500"
-            value={filters.branch_id || ''}
-            disabled={isBranchLocked}
-            onChange={(e) => setFilters({ ...filters, branch_id: e.target.value, court_id: '' })}
-          >
-            {!isBranchLocked && <option value="">Tất cả chi nhánh</option>}
-            {isBranchLocked && !filters.branch_id && (
-              <option value="">Chưa gán chi nhánh</option>
-            )}
-            {branches.map((branch) => (
-              <option key={branch._id} value={branch._id}>
-                {branch.name} {/* Thay branch.name bằng tên trường đúng trong DB của bạn */}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Floating Control Panel for Filters */}
+        <div className="bg-white p-6 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-slate-100 space-y-6 backdrop-blur-md bg-opacity-95 relative z-10 transition-all">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h1 className="text-2xl font-black text-[#064e3b] uppercase tracking-wide">
+              Quản lý Đặt sân
+            </h1>
+          </div>
 
-          {/* 2. Lọc theo Sân (Court) */}
-          <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-slate-600">Sân</label>
-          <select
-            className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white"
-            value={filters.court_id || ''}
-            onChange={(e) => setFilters({ ...filters, court_id: e.target.value })}
-          >
-            <option value="">Tất cả các sân</option>
-            {courtsList.map((court) => (
-              <option key={court._id} value={court._id}>
-                {court.name} {/* Thay court.name bằng tên trường đúng trong DB của bạn */}
-              </option>
-            ))}
-          </select>
-        </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
-          {/* 3. Lọc theo Ngày */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-600">Ngày chơi</label>
-            <input
-              type="date"
-              className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white"
-              value={filters.date || ''}
-              onChange={(e) => setFilters({ ...filters, date: e.target.value })}
-            />
-          </div>
+            {/* 1. MAP DATA CHI NHÁNH VÀO DROPDOWN */}
+            <div className="relative">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                <MapPin size={14} className="text-[#064e3b]" />
+                Chi nhánh
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-3.5 pr-10 py-3 text-sm text-slate-800 outline-none transition-all duration-300 focus:bg-white focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20 focus:shadow-sm appearance-none cursor-pointer disabled:opacity-50 disabled:bg-slate-100 disabled:text-slate-500"
+                  value={filters.branch_id || ''}
+                  disabled={isBranchLocked}
+                  onChange={(e) => setFilters({ ...filters, branch_id: e.target.value, court_id: '' })}
+                >
+                  {!isBranchLocked && <option value="">Tất cả chi nhánh</option>}
+                  {isBranchLocked && !filters.branch_id && (
+                    <option value="">Chưa gán chi nhánh</option>
+                  )}
+                  {branches.map((branch) => (
+                    <option key={branch._id} value={branch._id}>
+                      {branch.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-450">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
+            </div>
 
-          {/* 4. Lọc theo Trạng thái */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-600">Trạng thái</label>
-            <select
-              className="p-2 text-sm border border-slate-300 rounded-lg outline-none focus:border-blue-500 bg-white"
-              value={filters.status || ''}
-              onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="holding">Chờ cọc</option>
-              <option value="deposited">Đã cọc (Chờ chơi)</option>
-              <option value="playing">Đang chơi</option>
-              <option value="completed">Hoàn thành</option>
-              <option value="cancelled">Đã hủy</option>
-            </select>
-          </div>
+            {/* 2. Lọc theo Sân (Court) */}
+            <div className="relative">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                <Sparkles size={14} className="text-[#064e3b]" />
+                Sân thi đấu
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-3.5 pr-10 py-3 text-sm text-slate-800 outline-none transition-all duration-300 focus:bg-white focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20 focus:shadow-sm appearance-none cursor-pointer"
+                  value={filters.court_id || ''}
+                  onChange={(e) => setFilters({ ...filters, court_id: e.target.value })}
+                >
+                  <option value="">Tất cả các sân</option>
+                  {courtsList.map((court) => (
+                    <option key={court._id} value={court._id}>
+                      {court.name}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-450">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
+            </div>
+                
+            {/* 3. Lọc theo Ngày */}
+            <div className="relative">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                <Calendar size={14} className="text-[#064e3b]" />
+                Ngày chơi
+              </label>
+              <input
+                type="date"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-800 outline-none transition-all duration-300 focus:bg-white focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20 focus:shadow-sm cursor-pointer"
+                value={filters.date || ''}
+                onChange={(e) => setFilters({ ...filters, date: e.target.value })}
+              />
+            </div>
 
+            {/* 4. Lọc theo Trạng thái */}
+            <div className="relative">
+              <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                <Activity size={14} className="text-[#064e3b]" />
+                Trạng thái
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-3.5 pr-10 py-3 text-sm text-slate-800 outline-none transition-all duration-300 focus:bg-white focus:border-lime-400 focus:ring-4 focus:ring-lime-400/20 focus:shadow-sm appearance-none cursor-pointer"
+                  value={filters.status || ''}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  <option value="">Tất cả trạng thái</option>
+                  <option value="holding">Chờ cọc</option>
+                  <option value="deposited">Đã cọc (Chờ chơi)</option>
+                  <option value="playing">Đang chơi</option>
+                  <option value="completed">Hoàn thành</option>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
+                <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-450">
+                  <ChevronDown size={16} />
+                </div>
+              </div>
+            </div>
+
+          </div>
         </div>
-      </div>
 
-      {/* Gọi Component Bảng và truyền "quyền sinh sát" (renderStaffActions) xuống cho nó */}
-      <BookingHistoryTable
-        data={historyData}
-        isLoading={isLoading}
-        showDepositColumn={false}
-        renderActions={renderStaffActions}
-      />
-      
-    </div>
+        {/* Gọi Component Bảng và truyền "quyền sinh sát" (renderStaffActions) xuống cho nó */}
+        <div className="bg-white rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.06)] border border-slate-100 p-6 overflow-hidden">
+          <BookingHistoryTable
+            data={historyData}
+            isLoading={isLoading}
+            showDepositColumn={false}
+            renderActions={renderStaffActions}
+          />
+        </div>
+        
+      </div>
     </StaffLayout>
   );
 };

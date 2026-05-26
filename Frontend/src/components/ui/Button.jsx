@@ -3,7 +3,7 @@ import clsx from "clsx";
 
 const VARIANTS = {
   primary:
-    "bg-emerald-500 text-white shadow-sm hover:bg-emerald-600 focus-visible:ring-emerald-500",
+    "bg-primary-action text-black shadow-sm hover:bg-primary-light focus-visible:ring-primary-action",
   secondary:
     "bg-slate-100 text-slate-900 hover:bg-slate-200 focus-visible:ring-slate-400",
   outline:
@@ -44,7 +44,7 @@ const Button = React.forwardRef(
         ref={ref}
         type={Component === "button" ? type : undefined}
         className={clsx(
-          "inline-flex items-center justify-center gap-2 rounded-2xl font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
+          "inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60",
           VARIANTS[variant],
           SIZES[size],
           className,
