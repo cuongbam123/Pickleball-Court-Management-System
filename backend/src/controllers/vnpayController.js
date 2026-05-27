@@ -7,7 +7,6 @@ const sharedMatchService = require("../services/sharedMatchService");
 function sortObject(obj) {
   const sorted = {};
   const keys = [];
-
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       keys.push(encodeURIComponent(key));
