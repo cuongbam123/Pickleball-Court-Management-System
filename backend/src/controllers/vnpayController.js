@@ -3,6 +3,7 @@ const querystring = require("qs");
 const mongoose = require("mongoose");
 const bookingService = require("../services/bookingService");
 const orderService = require("../services/orderService");
+const tournamentsService = require("../services/tournamentsService");
 const Booking = require("../models/bookings");
 const Order = require("../models/orders");
 
@@ -248,10 +249,15 @@ const vnpayIpn = async (req, res) => {
       if (txnRef.startsWith("O_")) {
         // 1. THANH TOÁN TỔNG BILL (ORDER)
         const orderId = txnRef.split("O_")[1]; // Cắt bỏ chữ O_ để lấy ID thật
-        await orderService.confirmOrderFinalPayment(orderId, vnp_Amount);
+        await orderService.confirmOrderFinalPayment(orderId, vnp_Amount, vnp_Params["vnp_TransactionNo"]);
+      } else if (txnRef.startsWith("TP_")) {
+        // 3. THANH TOÁN GIẢI ĐẤU (TOURNAMENT)
+        const participantId = txnRef.split("TP_")[1]; // Cắt bỏ chữ TP_ để lấy ID thật
+        const vnp_TransactionNo = vnp_Params["vnp_TransactionNo"];
+        await tournamentsService.confirmTournamentPayment(participantId, vnp_Amount, vnp_TransactionNo);
       } else {
         // 2. THANH TOÁN CỌC BAN ĐẦU (BOOKING)
-        await bookingService.confirmBookingDeposit(txnRef, vnp_Amount);
+        await bookingService.confirmBookingDeposit(txnRef, vnp_Amount, vnp_Params["vnp_TransactionNo"]);
       }
 
       return res.status(200).json({ RspCode: "00", Message: "Confirm Success" });
