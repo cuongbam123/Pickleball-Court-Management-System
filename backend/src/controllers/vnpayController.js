@@ -13,7 +13,6 @@ function sortObject(obj) {
       keys.push(encodeURIComponent(key));
     }
   }
-
   keys.sort();
 
   for (const key of keys) {
