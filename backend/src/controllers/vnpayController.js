@@ -2,6 +2,8 @@ const crypto = require("crypto");
 const querystring = require("qs");
 const bookingService = require("../services/bookingService");
 const orderService = require("../services/orderService"); 
+const sharedMatchService = require("../services/sharedMatchService");
+
 function sortObject(obj) {
   let sorted = {};
   let str = [];
@@ -47,6 +49,9 @@ const vnpayIpn = async (req, res) => {
         // 1. THANH TOÁN TỔNG BILL (ORDER)
         const orderId = txnRef.split("O_")[1]; // Cắt bỏ chữ O_ để lấy ID thật
         await orderService.confirmOrderFinalPayment(orderId, vnp_Amount);
+      } else if (txnRef.startsWith("ST_")) {
+        const ticketId = txnRef.split("ST_")[1];
+        await sharedMatchService.confirmSharedTicketPayment(ticketId, vnp_Amount);
       } else {
         // 2. THANH TOÁN CỌC BAN ĐẦU (BOOKING)
         await bookingService.confirmBookingDeposit(txnRef, vnp_Amount);
@@ -69,7 +74,7 @@ const vnpayIpn = async (req, res) => {
 // =====================================================================
 // 2. LUỒNG RETURN URL: TRẢ VỀ FRONTEND (CHỈ ĐỂ HIỂN THỊ)
 // =====================================================================
-const vnpayReturn = (req, res) => {
+const vnpayReturn = async (req, res) => {
   let vnp_Params = req.query;
   const secureHash = vnp_Params["vnp_SecureHash"];
 
@@ -84,8 +89,23 @@ const vnpayReturn = (req, res) => {
   const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
 
   if (secureHash === signed) {
+    const txnRef = vnp_Params["vnp_TxnRef"];
+    const vnp_Amount = vnp_Params["vnp_Amount"] / 100;
     const responseCode = vnp_Params["vnp_ResponseCode"];
     if (responseCode === "00") {
+      if (txnRef.startsWith("ST_")) {
+        try {
+          const ticketId = txnRef.split("ST_")[1];
+          await sharedMatchService.confirmSharedTicketPayment(ticketId, vnp_Amount);
+        } catch (error) {
+          console.error("Lỗi xác nhận thanh toán vé ghép từ Return URL:", error);
+          return res.status(200).json({
+            success: false,
+            message: "Giao dịch thành công nhưng cập nhật trạng thái thất bại",
+          });
+        }
+      }
+
       // Thành công -> Bắn ra giao diện Frontend báo Thành Công
       res.status(200).json({ success: true, message: "Giao dịch thành công!" });
     } else {
