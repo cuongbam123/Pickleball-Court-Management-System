@@ -5,7 +5,7 @@ const sharedMatchSchema = new mongoose.Schema(
   {
     booking_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "bookings",
+      ref: "Bookings",
       required: true,
       unique: true, // 1 booking chỉ tạo 1 sân ghép (Tự động tạo index)
     },

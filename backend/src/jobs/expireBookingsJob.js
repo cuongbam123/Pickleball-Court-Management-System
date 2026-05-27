@@ -8,6 +8,7 @@ const expireBookingsJob = () => {
       const result = await Booking.updateMany(
         {
           status: "holding",
+          booking_type: "standard",
           expires_at: { $lt: now },
         },
         {

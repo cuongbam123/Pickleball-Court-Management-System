@@ -32,7 +32,7 @@ const orderSchema = new mongoose.Schema(
   {
     booking_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "bookings",
+      ref: "Bookings",
       required: true,
       unique: true, // 1 booking = 1 order
     },
