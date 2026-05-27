@@ -14,7 +14,6 @@ function sortObject(obj) {
     }
   }
   keys.sort();
-
   for (const key of keys) {
     sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, "+");
   }
