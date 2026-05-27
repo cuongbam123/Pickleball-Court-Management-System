@@ -29,7 +29,6 @@ const confirmVnpayTransaction = async (txnRef, vnpAmount) => {
     await orderService.confirmOrderFinalPayment(orderId, vnpAmount);
     return;
   }
-
   if (txnRef.startsWith("ST_")) {
     const ticketId = txnRef.split("ST_")[1];
     await sharedMatchService.confirmSharedTicketPayment(ticketId, vnpAmount);
