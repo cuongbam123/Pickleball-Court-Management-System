@@ -532,6 +532,7 @@ function sortObject(obj) {
 
 const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
   const session = await mongoose.startSession();
+  console.log("vnp_Amount", vnp_Amount)
 
   try {
     await session.withTransaction(async () => {

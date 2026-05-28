@@ -13,11 +13,25 @@ const sharedTicketSchema = new mongoose.Schema(
       ref: "users",
       required: true,
     },
+    ticket_price: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    paid_amount: {
+      type: Number,
+      min: 0,
+    },
 
     payment_status: {
       type: String,
       enum: ["pending", "paid", "cancelled"],
       default: "pending",
+    },
+
+    expires_at: {
+      type: Date,
+      default: null,
     },
 
     // optional: soft delete
@@ -48,7 +62,7 @@ sharedTicketSchema.index({ shared_match_id: 1 });
 sharedTicketSchema.index({ user_id: 1 });
 
 // ✅ query theo trạng thái thanh toán
-sharedTicketSchema.index({ payment_status: 1 });
+sharedTicketSchema.index({ payment_status: 1 , expires_at: 1});
 // ================= MODEL =================
 const SharedTicket = mongoose.model("shared_tickets", sharedTicketSchema);
 
