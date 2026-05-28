@@ -1,6 +1,7 @@
 const Court = require("../models/court");
 const Branch = require("../models/branches");
 const Booking = require("../models/bookings");
+const { emitCourtUpdate } = require("../config/socket");
 
 //Get all
 // court.service.js (hoặc file chứa hàm getCourtsByBranch hiện tại của bạn)
@@ -151,6 +152,7 @@ const updateCourt = async (id, payload) => {
       error.error_code = "ERR_COURT_NOT_FOUND";
       throw error;
     }
+    emitCourtUpdate(court);
     return court;
   } catch (err) {
     if (err.code === 11000) {
@@ -177,6 +179,7 @@ const updateCourtStatus = async (id, status) => {
     error.error_code = "ERR_COURT_NOT_FOUND";
     throw error;
   }
+  emitCourtUpdate(court);
   return court;
 };
 
@@ -193,6 +196,7 @@ const updateCourtTagStatus = async (id, tagStatus) => {
     error.error_code = "ERR_COURT_NOT_FOUND";
     throw error;
   }
+  emitCourtUpdate(court);
   return court;
 };
 

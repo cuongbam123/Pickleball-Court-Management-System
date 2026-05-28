@@ -29,7 +29,14 @@ const CustomerBookingPage = () => {
     gridData,
     isLoading: isGridLoading,
     timeHeaders,
-  } = useTimeGrid(selectedBranch, selectedCourt, selectedDate, courtsList);
+  } = useTimeGrid(
+    selectedBranch,
+    selectedCourt,
+    selectedDate,
+    courtsList,
+    selectedSlots,
+    setSelectedSlots,
+  );
 
   const filteredGridData = React.useMemo(() => {
     if (!gridData || gridData.length === 0) return [];

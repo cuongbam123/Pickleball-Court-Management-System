@@ -92,3 +92,21 @@ button:disabled,
     opacity: 1;
   }
 }
+
+@keyframes flash-highlight {
+  0% {
+    box-shadow: 0 0 14px #69f0ae, inset 0 0 10px rgba(105, 240, 174, 0.4);
+    background-color: #b9f6ca;
+    transform: scale(1.04);
+  }
+  100% {
+    box-shadow: none;
+    transform: scale(1);
+  }
+}
+
+.animate-flash-update {
+  animation: flash-highlight 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  z-index: 10;
+  position: relative;
+}
