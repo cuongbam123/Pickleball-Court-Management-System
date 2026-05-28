@@ -4,6 +4,7 @@ require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
 const expireBookingsJob = require('./jobs/expireBookingsJob');
+const expireSharedTicketsJob = require('./jobs/expireSharedTicketsJob');
 const autoRankJob = require('./jobs/autoRankJob');
 const tournamentCron = require("./jobs/tournamentCron");
 
@@ -18,6 +19,7 @@ const startServer = async () => {
         console.log('✅ Đã kết nối Database thành công.');
 
         expireBookingsJob();
+        expireSharedTicketsJob();
         autoRankJob();
         tournamentCron();
 

@@ -100,6 +100,6 @@ bookingSchema.index({ user_id: 1, createdAt: -1 });
 // Hỗ trợ Worker/TTL quét booking hết hạn giữ chỗ
 bookingSchema.index({ status: 1, expires_at: 1 });
 
-const Booking = mongoose.model("Bookings", bookingSchema);
+const Booking = mongoose.model("bookings", bookingSchema);
 
 module.exports = Booking;

@@ -172,12 +172,18 @@ const getSharedMatchTicket = async (req, res) => {
 
 const cancelSharedTicket = async (req, res) => {
   try {
-    await sharedMatchService.cancelSharedTicket(req.params.ticket_id, req.user);
+    const result = await sharedMatchService.cancelSharedTicket(
+      req.params.ticket_id,
+      req.user,
+    );
 
     return res.status(200).json({
       success: true,
       message: "Hủy vé thành công",
-      data: null,
+      data: {
+        ticket_id: result.ticket._id,
+        refund_action: result.refund_action,
+      },
     });
   } catch (error) {
     return res.status(error.statusCode || 500).json({

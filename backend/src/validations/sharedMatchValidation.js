@@ -109,33 +109,6 @@ const updateSharedMatchStatusValidation = {
   }),
 };
 
-const joinSharedMatchValidation = {
-  params: joi.object({
-    id: joi.string().pattern(objectIdRegex).required().messages({
-      "string.base": "id phải là một chuỗi",
-      "string.pattern.base": "id phải là ObjectId hợp lệ",
-      "any.required": "id là bắt buộc",
-    }),
-  }),
-};
-
-const confirmSharedTicketPaymentValidation = {
-  params: joi.object({
-    ticket_id: joi.string().pattern(objectIdRegex).required().messages({
-      "string.base": "ticket_id phải là một chuỗi",
-      "string.pattern.base": "ticket_id phải là ObjectId hợp lệ",
-      "any.required": "ticket_id là bắt buộc",
-    }),
-  }),
-  body: joi.object({
-    paid_amount: joi.number().min(0).required().messages({
-      "number.base": "paid_amount phải là một số",
-      "number.min": "paid_amount phải lớn hơn hoặc bằng 0",
-      "any.required": "paid_amount là bắt buộc",
-    }),
-  }),
-};
-
 const buySharedMatchTicketValidation = {
   params: joi.object({
     id: joi.string().pattern(objectIdRegex).required().messages({
@@ -179,8 +152,6 @@ module.exports = {
   getSharedMatchByIdValidation,
   updateSharedMatchValidation,
   updateSharedMatchStatusValidation,
-  joinSharedMatchValidation,
-  confirmSharedTicketPaymentValidation,
   buySharedMatchTicketValidation,
   getSharedMatchTicketValidation,
   cancelSharedTicketValidation,

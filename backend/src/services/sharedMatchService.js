@@ -10,6 +10,8 @@ const { format, toZonedTime } = require("date-fns-tz");
 
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 const SHARED_TICKET_PENDING_MINUTES = 10;
+const SHARED_TICKET_FULL_REFUND_HOURS = 5;
+const SHARED_TICKET_HALF_REFUND_HOURS = 2;
 
 const sortObject = (obj) => {
   const sorted = {};
@@ -35,6 +37,24 @@ const createError = (message, statusCode, errorCode) => {
   if (errorCode) error.errorCode = errorCode;
   return error;
 };
+const calculateSharedTicketRefund = (startTime, paidAmount, now = new Date()) => {
+  const hoursUntilStart =
+    (startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+  let refundPercentage = 0;
+  if (hoursUntilStart >= SHARED_TICKET_FULL_REFUND_HOURS) {
+    refundPercentage = 100;
+  } else if (hoursUntilStart >= SHARED_TICKET_HALF_REFUND_HOURS) {
+    refundPercentage = 50;
+  }
+
+  return {
+    is_refundable: refundPercentage > 0,
+    amount: Math.round((paidAmount * refundPercentage) / 100),
+    percentage: refundPercentage,
+    hours_until_start: hoursUntilStart,
+  };
+};
 const createSharedMatch = async (data) => {
   const {
     court_id,
@@ -56,8 +76,9 @@ const createSharedMatch = async (data) => {
     const overlappingBooking = await Booking.findOne({
       court_id,
       status: { $nin: ["cancelled"] },
-      start_time: { $lte: end },
-      end_time: { $gte: start },
+      start_time: { $lt: end },
+      end_time: { $gt: start },
+      is_deleted: false,
     }).session(session);
 
     if (overlappingBooking) {
@@ -593,7 +614,7 @@ const cancelSharedTicket = async (ticketId, user) => {
   const session = await mongoose.startSession();
 
   try {
-    await session.withTransaction(async () => {
+    const result = await session.withTransaction(async () => {
       const ticket = await SharedTicket.findOne({
         _id: ticketId,
         is_deleted: false,
@@ -611,7 +632,14 @@ const cancelSharedTicket = async (ticketId, user) => {
       }
 
       if (ticket.payment_status === "cancelled") {
-        return;
+        return {
+          ticket,
+          refund_action: {
+            is_refundable: false,
+            amount: 0,
+            percentage: 0,
+          },
+        };
       }
 
       const shouldReleaseSlot = ticket.payment_status === "paid";
@@ -625,8 +653,54 @@ const cancelSharedTicket = async (ticketId, user) => {
         throw createError("Sân ghép không tồn tại", 404);
       }
 
+      const booking = await Booking.findOne({
+        _id: sharedMatch.booking_id,
+        is_deleted: false,
+      })
+        .select("start_time")
+        .session(session);
+
+      if (!booking) {
+        throw createError("Không tìm thấy booking của sân ghép", 404);
+      }
+
+      const now = new Date();
+      if (isOwner && now >= booking.start_time) {
+        throw createError(
+          "Đã đến giờ bắt đầu, bạn không thể tự hủy vé. Vui lòng liên hệ quản lý.",
+          400,
+        );
+      }
+
       if (sharedMatch.status !== "recruiting") {
         throw createError("Chỉ có thể hủy vé khi ca ghép đang tuyển người", 400);
+      }
+
+      let refundAction = {
+        is_refundable: false,
+        amount: 0,
+        percentage: 0,
+      };
+
+      if (shouldReleaseSlot && isOwner) {
+        const paidAmount =
+          Number(ticket.paid_amount) > 0
+            ? Number(ticket.paid_amount)
+            : Number(ticket.ticket_price);
+
+        refundAction = calculateSharedTicketRefund(
+          booking.start_time,
+          paidAmount,
+          now,
+        );
+
+        if (refundAction.amount > 0) {
+          await User.updateOne(
+            { _id: ticket.user_id, is_deleted: false },
+            { $inc: { credit: refundAction.amount } },
+            { session },
+          );
+        }
       }
 
       ticket.payment_status = "cancelled";
@@ -634,15 +708,23 @@ const cancelSharedTicket = async (ticketId, user) => {
       await ticket.save({ session });
 
       if (!shouldReleaseSlot) {
-        return;
+        return {
+          ticket,
+          refund_action: refundAction,
+        };
       }
 
       sharedMatch.booked_slots = Math.max(0, sharedMatch.booked_slots - 1);
 
       await sharedMatch.save({ session });
+
+      return {
+        ticket,
+        refund_action: refundAction,
+      };
     });
 
-    return null;
+    return result;
   } finally {
     session.endSession();
   }
