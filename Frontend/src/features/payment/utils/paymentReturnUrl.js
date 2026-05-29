@@ -1,5 +1,5 @@
 export const getPaymentResultReturnUrl = () => {
-  return "http://localhost:5173/payment-result";
+  return `${window.location.origin}/payment-result`;
 };
 
 /** Đường dẫn lịch đặt sân theo role sau thanh toán */
