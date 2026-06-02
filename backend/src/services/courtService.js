@@ -53,7 +53,7 @@ const getCourtsByBranch = async (
   branchId,
   { page, limit, type, status, tagStatus },
   userRole,
-) => {
+) => { 
   const isAdmin = userRole === "admin";
 
   const query = {

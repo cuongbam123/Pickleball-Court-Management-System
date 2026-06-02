@@ -67,6 +67,7 @@ const LoginForm = () => {
 
       switch (user.role) {
         case "admin":
+        case "manager":
         case "staff":
         case "customer":
           if (canRestoreBookingDraft) {
