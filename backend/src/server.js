@@ -5,6 +5,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const expireBookingsJob = require('./jobs/expireBookingsJob');
 const expireSharedTicketsJob = require('./jobs/expireSharedTicketsJob');
+const expireTournamentPaymentsJob = require('./jobs/expireTournamentPaymentsJob');
 const autoRankJob = require('./jobs/autoRankJob');
 const tournamentCron = require("./jobs/tournamentCron");
 
@@ -20,6 +21,7 @@ const startServer = async () => {
 
         expireBookingsJob();
         expireSharedTicketsJob();
+        expireTournamentPaymentsJob();
         autoRankJob();
         tournamentCron();
 

@@ -2,6 +2,9 @@ const Tournaments = require("../models/tournaments");
 const TournamentParticipants = require("../models/tournamentParticipants");
 const TournamentBrackets = require("../models/tournamentBrackets");
 const AuditLog = require("../models/audit_logs");
+const PaymentTransaction = require("../models/payment_transactions");
+const User = require("../models/users");
+const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const mongoose = require("mongoose");
 
 const TOURNAMENT_STATUSES = {
@@ -455,8 +458,15 @@ const registerForTournament = async (tournamentId, user) => {
       throw new Error("Giải đấu đã đạt số lượng người tham gia tối đa.");
     }
 
-    // 5. check rank
-    if (user.rank < tournament.required_rank) {
+    const userDoc = await User.findById(user.userId || user.id || user._id).session(session);
+    if (!userDoc) {
+      throw new Error("Không tìm thấy thông tin người dùng.");
+    }
+
+    const userRankMap = { "D": 1, "C": 2, "B": 3, "A": 4 };
+    const userRankVal = userRankMap[userDoc.skill_rank] || 0;
+    const reqRankVal = userRankMap[tournament.required_rank] || 0;
+    if (userRankVal < reqRankVal) {
       throw new Error("Cấp bậc của bạn không đủ.");
     }
 
@@ -684,6 +694,338 @@ const getBrackets = async (tournamentId) => {
   return brackets;
 };
 
+const initiateTournamentPayment = async (tournamentId, user, body, req) => {
+  const { payment_method, redirect_url } = body;
+
+  if (payment_method !== "vnpay") {
+    const error = new Error("Phương thức thanh toán không được hỗ trợ");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const tournament = await Tournaments.findOne({
+      _id: tournamentId,
+      is_deleted: false,
+    }).session(session);
+
+    if (!tournament) {
+      const error = new Error("Không tìm thấy giải đấu.");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (tournament.status !== TOURNAMENT_STATUSES.OPEN_REGISTRATION) {
+      throw new Error("Giải đấu không đang mở đăng ký.");
+    }
+
+    const userDoc = await User.findById(user.userId || user.id || user._id).session(session);
+    if (!userDoc) {
+      throw new Error("Không tìm thấy thông tin người dùng.");
+    }
+
+    const userRankMap = { "D": 1, "C": 2, "B": 3, "A": 4 };
+    const userRankVal = userRankMap[userDoc.skill_rank] || 0;
+    const reqRankVal = userRankMap[tournament.required_rank] || 0;
+    if (userRankVal < reqRankVal) {
+      throw new Error("Cấp bậc của bạn không đủ điều kiện tham gia giải đấu này.");
+    }
+
+    const existingRegistration = await TournamentParticipants.findOne({
+      tournament_id: tournamentId,
+      user_id: user.userId,
+      is_deleted: false,
+      payment_status: { $in: ["pending", "paid"] },
+    }).session(session);
+
+    if (existingRegistration) {
+      if (existingRegistration.payment_status === "paid") {
+        throw new Error("Bạn đã đăng ký và hoàn tất đóng phí cho giải đấu này.");
+      }
+      
+      const existingTxn = await PaymentTransaction.findOne({
+        reference_type: "TournamentParticipant",
+        reference_id: existingRegistration._id,
+        status: "pending",
+        expires_at: { $gt: new Date() },
+      }).session(session);
+
+      if (existingTxn) {
+        let ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+        if (ipAddr === "::1" || ipAddr === "::ffff:127.0.0.1") ipAddr = "127.0.0.1";
+
+        const vnpayRes = buildVnpayUrl({
+          txnRef: `TP_${existingRegistration._id.toString()}`,
+          amount: tournament.entry_fee,
+          orderInfo: `Thanh toan phi tham gia giai dau ${tournament.name}`,
+          ipAddr,
+          returnUrl: redirect_url,
+          expireMinutes: 10,
+        });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return {
+          participant_id: existingRegistration._id,
+          tournament_id: tournament._id,
+          entry_fee: tournament.entry_fee,
+          payment_url: vnpayRes.payment_url,
+          expires_at: vnpayRes.expires_at,
+        };
+      }
+    }
+
+    const activeReservedCount = await TournamentParticipants.countDocuments({
+      tournament_id: tournamentId,
+      lifecycle: "reserved",
+      payment_status: "pending",
+      expires_at: { $gt: new Date() },
+      is_deleted: false,
+    }).session(session);
+
+    const confirmedCount = tournament.current_participants;
+    if (confirmedCount + activeReservedCount >= tournament.max_participants) {
+      throw new Error("Giải đấu đã đạt số lượng người tham gia tối đa (bao gồm các lượt đang chờ thanh toán).");
+    }
+
+    if (tournament.entry_fee === 0) {
+      const participantDocs = await TournamentParticipants.create(
+        [
+          {
+            tournament_id: tournamentId,
+            user_id: user.userId,
+            payment_status: "paid",
+            lifecycle: "confirmed",
+          },
+        ],
+        { session }
+      );
+      const participant = participantDocs[0];
+
+      await Tournaments.updateOne(
+        { _id: tournamentId },
+        { $inc: { current_participants: 1 } },
+        { session }
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return {
+        participant_id: participant._id,
+        tournament_id: tournament._id,
+        entry_fee: 0,
+        payment_url: null,
+        expires_at: null,
+      };
+    }
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const participantDocs = await TournamentParticipants.create(
+      [
+        {
+          tournament_id: tournamentId,
+          user_id: user.userId,
+          payment_status: "pending",
+          lifecycle: "reserved",
+          expires_at: expiresAt,
+        },
+      ],
+      { session }
+    );
+    const participant = participantDocs[0];
+
+    const txnDocs = await PaymentTransaction.create(
+      [
+        {
+          reference_type: "TournamentParticipant",
+          reference_id: participant._id,
+          amount: tournament.entry_fee,
+          payment_method: "vnpay",
+          status: "pending",
+          expires_at: expiresAt,
+        },
+      ],
+      { session }
+    );
+    const txn = txnDocs[0];
+
+    participant.payment_transaction_id = txn._id;
+    await participant.save({ session });
+
+    let ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+    if (ipAddr === "::1" || ipAddr === "::ffff:127.0.0.1") ipAddr = "127.0.0.1";
+
+    const vnpayRes = buildVnpayUrl({
+      txnRef: `TP_${participant._id.toString()}`,
+      amount: tournament.entry_fee,
+      orderInfo: `Thanh toan phi tham gia giai dau ${tournament.name}`,
+      ipAddr,
+      returnUrl: redirect_url,
+      expireMinutes: 10,
+    });
+
+    await AuditLog.create(
+      [
+        {
+          action: "initiate_tournament_payment",
+          user_id: user.userId,
+          target_collection: "tournament_participants",
+          target_id: participant._id,
+          old_value: null,
+          new_value: {
+            tournament_id: tournamentId,
+            lifecycle: "reserved",
+            payment_status: "pending",
+            expires_at: expiresAt,
+          },
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      participant_id: participant._id,
+      tournament_id: tournament._id,
+      entry_fee: tournament.entry_fee,
+      payment_url: vnpayRes.payment_url,
+      expires_at: vnpayRes.expires_at,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+const confirmTournamentPayment = async (participantId, vnpAmount, vnpTransactionNo) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const participant = await TournamentParticipants.findById(participantId).session(session);
+    if (!participant) throw new Error("01");
+
+    const tournament = await Tournaments.findById(participant.tournament_id).session(session);
+    if (!tournament) throw new Error("01");
+
+    if (tournament.entry_fee !== vnpAmount) throw new Error("04");
+
+    if (participant.payment_status === "paid") {
+      throw new Error("02");
+    }
+
+    const transaction = await PaymentTransaction.findOne({
+      reference_type: "TournamentParticipant",
+      reference_id: participantId,
+    }).session(session);
+
+    if (transaction) {
+      transaction.status = "paid";
+      transaction.webhook_transaction_id = vnpTransactionNo;
+      await transaction.save({ session });
+    }
+
+    participant.payment_status = "paid";
+    participant.lifecycle = "confirmed";
+    participant.expires_at = null;
+    await participant.save({ session });
+
+    const updateResult = await Tournaments.updateOne(
+      {
+        _id: participant.tournament_id,
+        current_participants: { $lt: tournament.max_participants },
+      },
+      {
+        $inc: { current_participants: 1 },
+      },
+      { session }
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      if (transaction) {
+        transaction.status = "failed";
+        await transaction.save({ session });
+      }
+      participant.payment_status = "failed";
+      participant.lifecycle = "cancelled";
+      await participant.save({ session });
+
+      throw new Error("Giải đấu đã đạt số lượng người tham gia tối đa. Suất của bạn sẽ được hoàn tiền.");
+    }
+
+    await AuditLog.create(
+      [
+        {
+          action: "confirm_tournament_payment",
+          user_id: participant.user_id,
+          target_collection: "tournament_participants",
+          target_id: participant._id,
+          old_value: {
+            payment_status: "pending",
+            lifecycle: "reserved",
+          },
+          new_value: {
+            payment_status: "paid",
+            lifecycle: "confirmed",
+          },
+        },
+      ],
+      { session }
+    );
+
+    await session.commitTransaction();
+    session.endSession();
+    return true;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+const getParticipantPaymentStatus = async (participantId, userId) => {
+  const participant = await TournamentParticipants.findById(participantId)
+    .populate("tournament_id", "name entry_fee max_participants current_participants status")
+    .lean();
+
+  if (!participant || participant.is_deleted) {
+    const error = new Error("Không tìm thấy thông tin đăng ký giải đấu");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (participant.user_id.toString() !== userId.toString()) {
+    const error = new Error("Bạn không có quyền xem thông tin đăng ký này");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const transaction = await PaymentTransaction.findOne({
+    reference_type: "TournamentParticipant",
+    reference_id: participantId,
+  }).lean();
+
+  return {
+    participant_id: participant._id,
+    tournament: participant.tournament_id,
+    payment_status: participant.payment_status,
+    lifecycle: participant.lifecycle,
+    amount: transaction?.amount || participant.tournament_id?.entry_fee || 0,
+    expires_at: participant.expires_at,
+    transaction_status: transaction?.status || null,
+    webhook_transaction_id: transaction?.webhook_transaction_id || null,
+    confirmed_at: participant.payment_status === "paid" ? participant.updatedAt : null,
+  };
+};
+
 module.exports = {
   TOURNAMENT_STATUSES,
   createTournament,
@@ -697,4 +1039,7 @@ module.exports = {
   getParticipants,
   generateBrackets,
   getBrackets,
+  initiateTournamentPayment,
+  confirmTournamentPayment,
+  getParticipantPaymentStatus,
 };
