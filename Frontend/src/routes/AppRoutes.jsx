@@ -17,6 +17,7 @@ const StaffCheckoutPage = lazy(() => import("../pages/staff/StaffCheckoutPage"))
 const StaffOrderDetailPage = lazy(() => import("../pages/staff/StaffOrderDetailPage"));
 const PaymentResultPage = lazy(() => import("../pages/payment/PaymentResultPage"));
 const PaymentRedirectPage = lazy(() => import("../pages/payment/PaymentRedirectPage"));
+const SharedMatchPage = lazy(() => import("../pages/user/SharedMatchPage"));
 
 //admin
 const AdminBranchPage = lazy(() => import("../pages/admin/AdminBranchPage"));
@@ -58,7 +59,7 @@ const AppRouteContent = () => {
             }
           />
           <Route
-            path="/home"
+            path="/home" 
             element={
               <ProtectedRoute>
                 <RoleHomePage />
@@ -70,6 +71,14 @@ const AppRouteContent = () => {
             element={
               <ProtectedRoute>
                 <MyBookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shared-matches"
+            element={
+              <ProtectedRoute>
+                <SharedMatchPage />
               </ProtectedRoute>
             }
           />

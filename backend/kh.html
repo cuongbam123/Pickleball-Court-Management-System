@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="vi" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sân Ghép - Pickleball Booking</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background-color: #FFFFFF;
+      color: #1F2937;
+    }
+
+    .container-wrapper {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .content-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #0F6848 0%, #0a4a33 100%);
+      padding: 40px 20px;
+      color: white;
+      box-shadow: 0 2px 8px rgba(15, 104, 72, 0.1);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-text h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+
+    .header-text p {
+      font-size: 16px;
+      opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 32px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      opacity: 0.85;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+    }
+
+    /* Main */
+    .main {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 40px 20px;
+    }
+
+    /* Filter Section */
+    .filter-section {
+      background: white;
+      padding: 24px;
+      border-radius: 16px;
+      border: 1px solid #E5E7EB;
+      margin-bottom: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .filter-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filter-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6B7280;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .filter-group input,
+    .filter-group select {
+      padding: 10px 14px;
+      border: 1px solid #D1D5DB;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      background-color: #F9FAFB;
+      transition: all 0.2s ease;
+    }
+
+    .filter-group input::placeholder {
+      color: #D1D5DB;
+    }
+
+    .filter-group input:focus,
+    .filter-group select:focus {
+      outline: none;
+      border-color: #0F6848;
+      background-color: white;
+      box-shadow: 0 0 0 3px rgba(15, 104, 72, 0.1);
+    }
+
+    .filter-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background-color: #0F6848;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: #0a4a33;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(15, 104, 72, 0.2);
+    }
+
+    .btn-secondary {
+      background-color: #F3F4F6;
+      color: #6B7280;
+      border: 1px solid #D1D5DB;
+    }
+
+    .btn-secondary:hover {
+      background-color: #E5E7EB;
+      border-color: #9CA3AF;
+    }
+
+    /* Matches Grid */
+    .matches-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .match-card {
+      background: white;
+      border: 1px solid #E5E7EB;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .match-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(15, 104, 72, 0.12);
+      border-color: #0F6848;
+    }
+
+    .card-header {
+      background: linear-gradient(135deg, #F0F9F7 0%, #E8F5EF 100%);
+      padding: 20px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .card-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: capitalize;
+      letter-spacing: 0.3px;
+    }
+
+    .badge-active {
+      background-color: #D1FAE5;
+      color: #065F46;
+    }
+
+    .badge-full {
+      background-color: #FEE2E2;
+      color: #991B1B;
+    }
+
+    .badge-started {
+      background-color: #FEF3C7;
+      color: #92400E;
+    }
+
+    .card-price {
+      font-size: 22px;
+      font-weight: 700;
+      color: #F97316;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+
+    .card-price-unit {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 500;
+    }
+
+    .card-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-info {
+      margin-bottom: 20px;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: #4B5563;
+    }
+
+    .info-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .info-row-label {
+      font-weight: 500;
+    }
+
+    .info-icon {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      color: #9CA3AF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+
+    /* Progress */
+    .progress-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #6B7280;
+      margin-bottom: 10px;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 6px;
+      background-color: #E5E7EB;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #0F6848 0%, #0a4a33 100%);
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .progress-text {
+      font-size: 13px;
+      color: #6B7280;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .progress-remaining {
+      color: #F97316;
+      font-weight: 600;
+    }
+
+    .card-footer {
+      padding-top: 20px;
+      border-top: 1px solid #E5E7EB;
+      margin-top: auto;
+    }
+
+    .view-btn {
+      width: 100%;
+      padding: 12px;
+      background-color: #0F6848;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .view-btn:hover {
+      background-color: #0a4a33;
+      transform: translateY(-2px);
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.2s ease;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(30px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #0F6848 0%, #0a4a33 100%);
+      color: white;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #E5E7EB;
+      flex-shrink: 0;
+    }
+
+    .modal-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+
+    .modal-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      font-weight: 600;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .modal-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      padding: 28px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .modal-left, .modal-right {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-section {
+      margin-bottom: 28px;
+    }
+
+    .modal-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .modal-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #6B7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .info-label {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 600;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .info-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1F2937;
+    }
+
+    .progress-section-modal {
+      margin-top: 16px;
+    }
+
+    .progress-bar-container-modal {
+      height: 8px;
+      background-color: #E5E7EB;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .progress-bar-modal {
+      height: 100%;
+      background: linear-gradient(90deg, #0F6848 0%, #0a4a33 100%);
+      border-radius: 4px;
+    }
+
+    /* Players Grid */
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .player-card {
+      background: #F9FAFB;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+
+    .player-card:hover {
+      border-color: #0F6848;
+      box-shadow: 0 2px 8px rgba(15, 104, 72, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .player-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 14px;
+    }
+
+    .player-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 4px;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    .player-rank {
+      font-size: 11px;
+      color: #9CA3AF;
+      font-weight: 500;
+    }
+
+    .player-empty {
+      background: #F3F4F6;
+      color: #9CA3AF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 500;
+      min-height: 80px;
+      border-color: #D1D5DB;
+    }
+
+    /* Modal Footer */
+    .modal-footer {
+      padding: 20px 28px;
+      border-top: 1px solid #E5E7EB;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+      background: white;
+    }
+
+    .fee-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #E5E7EB;
+      margin-bottom: 12px;
+    }
+
+    .fee-label {
+      font-size: 14px;
+      color: #6B7280;
+      font-weight: 500;
+    }
+
+    .fee-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: #F97316;
+    }
+
+    .modal-footer-buttons {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-join {
+      flex: 1;
+      padding: 14px;
+      background: linear-gradient(135deg, #0F6848 0%, #0a4a33 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    .btn-join:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(15, 104, 72, 0.3);
+    }
+
+    .btn-join:disabled {
+      background: #D1D5DB;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-close-modal {
+      flex: 1;
+      padding: 14px;
+      background: #F3F4F6;
+      color: #6B7280;
+      border: 1px solid #D1D5DB;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .btn-close-modal:hover {
+      background: #E5E7EB;
+      border-color: #9CA3AF;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+    }
+
+    .empty-state h3 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1F2937;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      color: #9CA3AF;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .header-content {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .header-stats {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .matches-grid {
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      }
+
+      .modal-layout {
+        grid-template-columns: 1fr;
+        gap: 24px;
+        padding: 24px;
+      }
+
+      .players-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 28px 16px;
+      }
+
+      .header-text h1 {
+        font-size: 28px;
+      }
+
+      .header-stats {
+        gap: 16px;
+      }
+
+      .stat-number {
+        font-size: 24px;
+      }
+
+      .main {
+        padding: 24px 16px;
+      }
+
+      .filter-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .matches-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .modal-content {
+        max-height: 95vh;
+        border-radius: 16px;
+      }
+
+      .modal-layout {
+        grid-template-columns: 1fr;
+        padding: 20px;
+      }
+
+      .modal-footer {
+        padding: 16px 20px;
+      }
+
+      .modal-footer-buttons {
+        flex-direction: column-reverse;
+      }
+
+      .players-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-text h1 {
+        font-size: 24px;
+      }
+
+      .header-text p {
+        font-size: 14px;
+      }
+
+      .stat-number {
+        font-size: 20px;
+      }
+
+      .stat-label {
+        font-size: 11px;
+      }
+
+      .filter-section {
+        padding: 16px;
+      }
+
+      .card-price {
+        font-size: 18px;
+      }
+
+      .players-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .modal-close {
+        width: 28px;
+        height: 28px;
+        font-size: 16px;
+      }
+    }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ <script src="/_sdk/telemetry_sdk.js"></script></head>
+ <body>
+  <div class="container-wrapper"><!-- Header -->
+   <div class="header">
+    <div class="header-content">
+     <div class="header-text">
+      <h1 id="page-title">Sân Ghép</h1>
+      <p id="page-subtitle">Tham gia các trận đấu đang tuyển người</p>
+     </div>
+     <div class="header-stats">
+      <div class="stat-item">
+       <div class="stat-number" id="total-matches">
+        6
+       </div>
+       <div class="stat-label">
+        Tổng ca ghép
+       </div>
+      </div>
+      <div class="stat-item">
+       <div class="stat-number" id="active-matches">
+        5
+       </div>
+       <div class="stat-label">
+        Đang tuyển
+       </div>
+      </div>
+     </div>
+    </div>
+   </div><!-- Content -->
+   <div class="content-scroll">
+    <div class="main"><!-- Filters -->
+     <div class="filter-section">
+      <div class="filter-header">
+       🔍 Tìm kiếm ca ghép
+      </div>
+      <div class="filter-grid">
+       <div class="filter-group"><label for="search">Tìm kiếm</label> <input type="text" id="search" placeholder="Nhập tên sân hoặc chi nhánh...">
+       </div>
+       <div class="filter-group"><label for="date-filter">Ngày</label> <input type="date" id="date-filter">
+       </div>
+       <div class="filter-group"><label for="branch-filter">Chi nhánh</label> <select id="branch-filter"> <option value="">Tất cả chi nhánh</option> <option value="STC Quận 1">STC Quận 1</option> <option value="STC Quận 3">STC Quận 3</option> <option value="STC Quận 7">STC Quận 7</option> <option value="STC Phú Nhuận">STC Phú Nhuận</option> </select>
+       </div>
+       <div class="filter-group"><label for="status-filter">Trạng thái</label> <select id="status-filter"> <option value="">Tất cả trạng thái</option> <option value="Đang tuyển">Đang tuyển</option> <option value="Đã đầy">Đã đầy</option> <option value="Đã bắt đầu">Đã bắt đầu</option> </select>
+       </div>
+      </div>
+      <div class="filter-actions"><button class="btn btn-secondary" onclick="resetFilters()">Xóa bộ lọc</button>
+      </div>
+     </div><!-- Matches Grid -->
+     <div id="matches-container"></div>
+    </div>
+   </div>
+  </div><!-- Modal -->
+  <div class="modal" id="modal">
+   <div class="modal-content">
+    <div class="modal-header">
+     <h2 id="modal-title">Chi tiết ca ghép</h2><button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-layout" id="modal-body"></div>
+    <div class="modal-footer">
+     <div class="fee-row"><span class="fee-label">Tổng phí tham gia:</span> <span class="fee-value" id="modal-fee">50.000đ</span>
+     </div>
+     <div class="modal-footer-buttons"><button class="btn-close-modal" onclick="closeModal()">Đóng</button> <button class="btn-join" id="join-btn" onclick="handleJoin()">Tham gia ngay</button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    // Mock Data
+    const mockMatches = [
+      {
+        id: 1,
+        date: "07/06/2026",
+        startTime: "13:00",
+        endTime: "16:00",
+        branch: "STC Quận 1",
+        court: "Sân 03",
+        ticketPrice: 50000,
+        maxSlots: 3,
+        bookedSlots: 0,
+        status: "Đang tuyển",
+        players: []
+      },
+      {
+        id: 2,
+        date: "07/06/2026",
+        startTime: "14:00",
+        endTime: "17:00",
+        branch: "STC Quận 3",
+        court: "Sân 01",
+        ticketPrice: 45000,
+        maxSlots: 4,
+        bookedSlots: 2,
+        status: "Đang tuyển",
+        players: [
+          { fullName: "Nguyễn Văn A", skillRank: "3.0" },
+          { fullName: "Trần Văn B", skillRank: "2.5" }
+        ]
+      },
+      {
+        id: 3,
+        date: "08/06/2026",
+        startTime: "07:00",
+        endTime: "09:00",
+        branch: "STC Quận 7",
+        court: "Sân 02",
+        ticketPrice: 60000,
+        maxSlots: 4,
+        bookedSlots: 4,
+        status: "Đã đầy",
+        players: [
+          { fullName: "Phạm Thị C", skillRank: "3.5" },
+          { fullName: "Hoàng Văn D", skillRank: "3.0" },
+          { fullName: "Võ Thị E", skillRank: "2.8" },
+          { fullName: "Lý Văn F", skillRank: "3.2" }
+        ]
+      },
+      {
+        id: 4,
+        date: "08/06/2026",
+        startTime: "18:00",
+        endTime: "20:00",
+        branch: "STC Phú Nhuận",
+        court: "Sân 04",
+        ticketPrice: 55000,
+        maxSlots: 4,
+        bookedSlots: 1,
+        status: "Đang tuyển",
+        players: [
+          { fullName: "Nguyễn Quốc G", skillRank: "2.5" }
+        ]
+      },
+      {
+        id: 5,
+        date: "09/06/2026",
+        startTime: "10:00",
+        endTime: "12:00",
+        branch: "STC Quận 1",
+        court: "Sân 05",
+        ticketPrice: 40000,
+        maxSlots: 2,
+        bookedSlots: 1,
+        status: "Đang tuyển",
+        players: [
+          { fullName: "Đặng Hữu H", skillRank: "4.0" }
+        ]
+      },
+      {
+        id: 6,
+        date: "09/06/2026",
+        startTime: "06:00",
+        endTime: "08:00",
+        branch: "STC Quận 3",
+        court: "Sân 02",
+        ticketPrice: 35000,
+        maxSlots: 4,
+        bookedSlots: 3,
+        status: "Đã bắt đầu",
+        players: [
+          { fullName: "Trương Việt I", skillRank: "3.5" },
+          { fullName: "Tô Thị J", skillRank: "3.0" },
+          { fullName: "Chu Văn K", skillRank: "2.9" }
+        ]
+      }
+    ];
+
+    let filteredMatches = [...mockMatches];
+    let currentModal = null;
+
+    // Utility: Format Currency
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        minimumFractionDigits: 0
+      }).format(value);
+    }
+
+    // Utility: Get Status Badge Class
+    function getStatusBadgeClass(status) {
+      if (status === "Đang tuyển") return "badge-active";
+      if (status === "Đã đầy") return "badge-full";
+      if (status === "Đã bắt đầu") return "badge-started";
+      return "";
+    }
+
+    // Update Stats
+    function updateStats() {
+      const totalMatches = mockMatches.length;
+      const activeMatches = mockMatches.filter(m => m.status === "Đang tuyển").length;
+      document.getElementById("total-matches").textContent = totalMatches;
+      document.getElementById("active-matches").textContent = activeMatches;
+    }
+
+    // Render Matches
+    function renderMatches() {
+      const container = document.getElementById("matches-container");
+
+      if (filteredMatches.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🎾</div>
+            <h3>Không tìm thấy ca ghép</h3>
+            <p>Vui lòng thay đổi bộ lọc để tìm ca ghép phù hợp</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="matches-grid">
+          ${filteredMatches.map(match => {
+            const progress = (match.bookedSlots / match.maxSlots) * 100;
+            const spotsLeft = match.maxSlots - match.bookedSlots;
+            const statusClass = getStatusBadgeClass(match.status);
+
+            return `
+              <div class="match-card" onclick="openModal(${match.id})">
+                <div class="card-header">
+                  <div class="card-badges">
+                    <span class="badge ${statusClass}">${match.status}</span>
+                  </div>
+                  <div class="card-price">
+                    ${formatCurrency(match.ticketPrice)}
+                    <div class="card-price-unit">/người</div>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <div class="card-info">
+                    <div class="info-row">
+                      <div class="info-icon">📅</div>
+                      <div><span class="info-row-label">Ngày:</span> ${match.date}</div>
+                    </div>
+                    <div class="info-row">
+                      <div class="info-icon">⏰</div>
+                      <div><span class="info-row-label">Giờ:</span> ${match.startTime} - ${match.endTime}</div>
+                    </div>
+                    <div class="info-row">
+                      <div class="info-icon">📍</div>
+                      <div><span class="info-row-label">${match.branch}</span></div>
+                    </div>
+                    <div class="info-row">
+                      <div class="info-icon">🏟️</div>
+                      <div><span class="info-row-label">Sân:</span> ${match.court}</div>
+                    </div>
+                  </div>
+                  <div class="progress-section">
+                    <div class="progress-label">Người tham gia</div>
+                    <div class="progress-bar-container">
+                      <div class="progress-bar" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="progress-text">
+                      <span>${match.bookedSlots} / ${match.maxSlots}</span>
+                      <span class="progress-remaining">${spotsLeft > 0 ? `Còn ${spotsLeft} vị trí` : 'Đã đầy'}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="card-footer">
+                  <button class="view-btn">Xem chi tiết</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    // Open Modal
+    function openModal(id) {
+      const match = mockMatches.find(m => m.id === id);
+      if (!match) return;
+
+      currentModal = match;
+      const emptySlots = match.maxSlots - match.bookedSlots;
+      const playerColors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA07A", "#98D8C8", "#F7DC6F"];
+
+      let playersHTML = match.players.map((player, idx) => `
+        <div class="player-card">
+          <div class="player-avatar" style="background-color: ${playerColors[idx % playerColors.length]}">
+            ${player.fullName.split(' ').pop()[0]}
+          </div>
+          <div class="player-name">${player.fullName}</div>
+          <div class="player-rank">Rank ${player.skillRank}</div>
+        </div>
+      `).join('');
+
+      for (let i = 0; i < emptySlots; i++) {
+        playersHTML += `<div class="player-card player-empty">Chờ người tham gia</div>`;
+      }
+
+      const progress = (match.bookedSlots / match.maxSlots) * 100;
+
+      const modalBody = document.getElementById("modal-body");
+      modalBody.innerHTML = `
+        <div class="modal-left">
+          <div class="modal-section">
+            <div class="modal-section-title">📋 Thông tin ca ghép</div>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Ngày</div>
+                <div class="info-value">${match.date}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Giờ</div>
+                <div class="info-value">${match.startTime} - ${match.endTime}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Chi nhánh</div>
+                <div class="info-value">${match.branch}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Sân</div>
+                <div class="info-value">${match.court}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Giá vé</div>
+                <div class="info-value">${formatCurrency(match.ticketPrice)}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Trạng thái</div>
+                <div class="info-value">${match.status}</div>
+              </div>
+            </div>
+            <div class="progress-section-modal">
+              <div style="font-size: 13px; font-weight: 600; color: #6B7280; margin-bottom: 8px;">Slot: ${match.bookedSlots} / ${match.maxSlots}</div>
+              <div class="progress-bar-container-modal">
+                <div class="progress-bar-modal" style="width: ${progress}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-right">
+          <div class="modal-section">
+            <div class="modal-section-title">👥 Danh sách người tham gia</div>
+            <div class="players-grid">
+              ${playersHTML}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById("modal-fee").textContent = formatCurrency(match.ticketPrice);
+      const joinBtn = document.getElementById("join-btn");
+      joinBtn.disabled = match.status !== "Đang tuyển" || emptySlots === 0;
+      if (match.status === "Đang tuyển") {
+        joinBtn.textContent = emptySlots > 0 ? "Tham gia ngay" : "Đã đầy";
+      } else {
+        joinBtn.textContent = "Không thể tham gia";
+      }
+
+      document.getElementById("modal").classList.add("active");
+    }
+
+    // Close Modal
+    function closeModal() {
+      document.getElementById("modal").classList.remove("active");
+      currentModal = null;
+    }
+
+    // Handle Join
+    function handleJoin() {
+      if (!currentModal) return;
+      const btn = document.getElementById("join-btn");
+      btn.textContent = "✓ Đã tham gia";
+      btn.disabled = true;
+      currentModal.bookedSlots += 1;
+      setTimeout(() => closeModal(), 600);
+    }
+
+    // Filter Functions
+    function applyFilters() {
+      const search = document.getElementById("search").value.toLowerCase();
+      const date = document.getElementById("date-filter").value;
+      const branch = document.getElementById("branch-filter").value;
+      const status = document.getElementById("status-filter").value;
+
+      filteredMatches = mockMatches.filter(match => {
+        const matchesSearch = match.court.toLowerCase().includes(search) || match.branch.toLowerCase().includes(search);
+        const matchesDate = !date || match.date === date;
+        const matchesBranch = !branch || match.branch === branch;
+        const matchesStatus = !status || match.status === status;
+
+        return matchesSearch && matchesDate && matchesBranch && matchesStatus;
+      });
+
+      renderMatches();
+    }
+
+    function resetFilters() {
+      document.getElementById("search").value = "";
+      document.getElementById("date-filter").value = "";
+      document.getElementById("branch-filter").value = "";
+      document.getElementById("status-filter").value = "";
+      filteredMatches = [...mockMatches];
+      renderMatches();
+    }
+
+    // Event Listeners
+    document.getElementById("search").addEventListener("input", applyFilters);
+    document.getElementById("date-filter").addEventListener("change", applyFilters);
+    document.getElementById("branch-filter").addEventListener("change", applyFilters);
+    document.getElementById("status-filter").addEventListener("change", applyFilters);
+    
+    // Close modal on backdrop click
+    document.getElementById("modal").addEventListener("click", (e) => {
+      if (e.target.id === "modal") closeModal();
+    });
+
+    // Close modal on ESC key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    // Element SDK
+    const defaultConfig = {
+      page_title: "Sân Ghép",
+      page_subtitle: "Tham gia các trận đấu đang tuyển người"
+    };
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          const c = { ...defaultConfig, ...config };
+          document.getElementById("page-title").textContent = c.page_title;
+          document.getElementById("page-subtitle").textContent = c.page_subtitle;
+        },
+        mapToCapabilities: () => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["page_title", config.page_title || defaultConfig.page_title],
+          ["page_subtitle", config.page_subtitle || defaultConfig.page_subtitle]
+        ])
+      });
+    }
+
+    // Initial Render
+    updateStats();
+    renderMatches();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a03e305a0dc177f1',t:'MTc4MDE0ODgyNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

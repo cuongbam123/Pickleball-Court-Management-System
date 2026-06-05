@@ -124,6 +124,7 @@ const createSharedMatch = async (data) => {
 const getSharedMatches = async (query) => {
   const {
     branch_id,
+    court_id,
     status = "recruiting",
     page = 1,
     limit = 10,
@@ -136,6 +137,9 @@ const getSharedMatches = async (query) => {
   };
   if (branch_id) {
     bookingFilter.branch_id = branch_id;
+  }
+  if (court_id) {
+    bookingFilter.court_id = court_id;
   }
 
   const bookings = await Booking.find(bookingFilter).select("_id");
@@ -755,6 +759,7 @@ const getSharedMatchTicket = async (shared_match_id) => {
     created_at: ticket.createdAt,
   }));
 };
+
 
 module.exports = {
   createSharedMatch,
