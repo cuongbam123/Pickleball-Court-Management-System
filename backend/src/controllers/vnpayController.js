@@ -5,6 +5,7 @@ const bookingService = require("../services/bookingService");
 const orderService = require("../services/orderService");
 const sharedMatchService = require("../services/sharedMatchService");
 const tournamentsService = require("../services/tournamentsService");
+const SharedTicket = require("../models/sharedTicket");
 const Booking = require("../models/bookings");
 const Order = require("../models/orders");
 
@@ -116,12 +117,60 @@ const getPaymentStatus = async (req, res, next) => {
     const isVnpayFailed = allowSignedReturn && signedReturn.responseCode !== "00";
 
     const isFinalPayment = txnRef.startsWith("O_");
-    const referenceId = isFinalPayment ? txnRef.slice(2) : txnRef;
+    const isSharedTicketPayment = txnRef.startsWith("ST_");
+    const referenceId = isSharedTicketPayment
+      ? txnRef.slice(3)
+      : isFinalPayment
+        ? txnRef.slice(2)
+        : txnRef;
 
     if (!mongoose.Types.ObjectId.isValid(referenceId)) {
       const error = new Error("Mã giao dịch không đúng định dạng");
       error.status = 400;
       throw error;
+    }
+    // --- TRƯỜNG HỢP 0: THANH TOÁN VÉ SÂN GHÉP ---
+    if (isSharedTicketPayment) {
+      const ticket = await SharedTicket.findOne({
+        _id: referenceId,
+        is_deleted: false,
+      }).lean();
+
+      if (!ticket) {
+        const error = new Error("Không tìm thấy vé sân ghép");
+        error.status = 404;
+        throw error;
+      }
+
+      ensureCanViewPayment(ticket.user_id, req.user, allowSignedReturn);
+
+      let paymentStatus = ticket.payment_status || "pending";
+      let failureReason = null;
+
+      if (ticket.payment_status === "paid" || isVnpaySuccess) {
+        paymentStatus = "paid";
+      } else if (isVnpayFailed) {
+        paymentStatus = "failed";
+        failureReason = getFailureReason(signedReturn.responseCode);
+      } else if (ticket.payment_status === "cancelled") {
+        paymentStatus = "failed";
+        failureReason = "Vé sân ghép đã bị hủy hoặc hết hạn thanh toán.";
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: "Kiểm tra trạng thái thanh toán vé sân ghép thành công",
+        data: {
+          txn_ref: txnRef,
+          payment_type: "shared_match",
+          ticket_id: ticket._id,
+          shared_match_id: ticket.shared_match_id,
+          payment_status: paymentStatus,
+          amount: ticket.paid_amount || ticket.ticket_price,
+          ticket_price: ticket.ticket_price,
+          failure_reason: failureReason,
+        },
+      });
     }
 
     // --- TRƯỜNG HỢP 1: THANH TOÁN TỔNG BILL (FINAL PAYMENT) ---
@@ -167,7 +216,7 @@ const getPaymentStatus = async (req, res, next) => {
       });
     }
 
-    // --- TRƯỜNG HỢP 2: THANH TOÁN CỌC (DEPOSIT) --- 
+    // --- TRƯỜNG HỢP 2: THANH TOÁN CỌC (DEPOSIT) ---
     const booking = await Booking.findOne({ _id: referenceId, is_deleted: false }).lean();
     if (!booking) {
       const error = new Error("Không tìm thấy lịch đặt sân");
