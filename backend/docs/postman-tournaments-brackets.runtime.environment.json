@@ -19,7 +19,7 @@
     },
     {
       "key": "admin_access_token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJiYzM0MzhkMmJhYzE5MGNjMmZhYjciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NzgxNDM5MzgsImV4cCI6MTc3ODE0NTczOH0.yw_6hLr5PnBjC1MjK198SZ_AnjCy89OU98cDq_kAswA",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2OWJiYzM0MzhkMmJhYzE5MGNjMmZhYjciLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3ODA2NDM3MzQsImV4cCI6MTc4MDY0NTUzNH0.tp-H2Qaorh3lLtxZ6pwuilr0C814m2mwy-PhXmQ94p8",
       "enabled": true
     },
     {
@@ -29,12 +29,12 @@
     },
     {
       "key": "tournament_id_not_close",
-      "value": "69fc52c116a2446c0bc2f9f0",
+      "value": "6a22779662f11c1c6b198227",
       "enabled": true
     },
     {
       "key": "tournament_id_close_registration",
-      "value": "69fc52c116a2446c0bc2f9f4",
+      "value": "6a22779662f11c1c6b19822b",
       "enabled": true
     }
   ],

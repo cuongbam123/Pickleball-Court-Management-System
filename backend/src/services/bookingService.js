@@ -19,6 +19,7 @@ const User = require("../models/users");
 const PaymentTransaction = require("../models/payment_transactions");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
+const { emitBookingChange } = require("../config/socket");
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
@@ -427,6 +428,8 @@ const holdBooking = async (body, user) => {
       is_deleted: false,
     });
 
+    emitBookingChange("create", createdBooking);
+
     return {
       booking_id: createdBooking._id,
       status: createdBooking.status,
@@ -586,6 +589,8 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
       });
     });
 
+    emitBookingChange("update", booking);
+
     return true;
   } catch (error) {
     throw error;
@@ -676,6 +681,10 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
 
       updatedBooking = booking;
     });
+
+    if (updatedBooking) {
+      emitBookingChange("update", updatedBooking);
+    }
 
     return updatedBooking;
   } catch (error) {
@@ -829,6 +838,11 @@ const cancelBooking = async (bookingId, reason, user) => {
         },
       };
     });
+
+    if (cancelledBooking?.booking) {
+      emitBookingChange("cancel", cancelledBooking.booking);
+    }
+
     return cancelledBooking;
   } catch (error) {
     throw error;

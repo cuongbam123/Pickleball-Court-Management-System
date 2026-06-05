@@ -2,6 +2,35 @@ import React from "react";
 import clsx from "clsx";
 import TimeGridSkeleton from "./TimeGridSkeleton";
 
+// Component con của từng Ô giờ, được tối ưu hóa bằng React.memo
+const TimeSlotCell = React.memo(({ slot, isSelected, onClick, getSlotColor }) => {
+  return (
+    <td 
+      onClick={onClick}
+      className={clsx(
+        "h-12 border rounded-md transition-all duration-300",
+        isSelected 
+          ? "bg-slate-800 border-slate-900 shadow-inner" 
+          : getSlotColor(slot),
+        slot.isNewUpdate && "animate-flash-update" // Kích hoạt hiệu ứng nhấp nháy khi có cập nhật real-time
+      )}
+    ></td>
+  );
+}, (prev, next) => {
+  // Chỉ re-render ô này khi trạng thái chọn, trạng thái đặt sân, hoặc cờ nhấp nháy thay đổi
+  return (
+    prev.isSelected === next.isSelected &&
+    prev.slot.status === next.slot.status &&
+    prev.slot.isPast === next.slot.isPast &&
+    prev.slot.pricePerHour === next.slot.pricePerHour &&
+    prev.slot.isNewUpdate === next.slot.isNewUpdate &&
+    prev.slot.bookingInfo?.booking_id === next.slot.bookingInfo?.booking_id &&
+    prev.slot.bookingInfo?.status === next.slot.bookingInfo?.status
+  );
+});
+
+TimeSlotCell.displayName = "TimeSlotCell";
+
 const TimeGrid = ({ 
   isLoading, 
   gridData, 
@@ -45,7 +74,6 @@ const TimeGrid = ({
     return "bg-white";
   };
 
-  // Hàm helper lấy màu cho Trạng thái Live tại quầy (tagStatus)
   const getLiveTagBadge = (tagStatus) => {
     switch (tagStatus) {
       case "playing": return <span className="px-2 py-0.5 text-[10px] bg-yellow-100 text-yellow-700 rounded-full font-bold">Đang đánh</span>;
@@ -95,7 +123,6 @@ const TimeGrid = ({
 
               {/* Các cột Render Slot thời gian theo Lịch */}
               {court.slots.map((slot, index) => {
-                // KIỂM TRA XEM Ô NÀY CÓ ĐANG ĐƯỢC USER CLICK CHỌN KHÔNG
                 const isSelected = selectedSlots.some(
                   (s) =>
                     String(s.courtId) === String(court._id) &&
@@ -104,18 +131,13 @@ const TimeGrid = ({
                 );
 
                 return (
-                  <td 
-                    key={index} 
-                    // BỔ SUNG ĐIỀU KIỆN CHẶN CLICK VÀO GIỜ QUÁ KHỨ (!slot.isPast)
+                  <TimeSlotCell
+                    key={index}
+                    slot={slot}
+                    isSelected={isSelected}
                     onClick={() => !slot.isPast && slot.status === 'available' && onSelectSlot(court, slot)}
-                    className={clsx(
-                      "h-12 border rounded-md transition-colors",
-                      // NẾU ĐANG CHỌN THÌ BÔI ĐEN, NẾU KHÔNG THÌ LẤY MÀU DỰA TRÊN OBJECT SLOT
-                      isSelected 
-                        ? "bg-slate-800 border-slate-900 shadow-inner" // Màu khi người dùng đang bấm chọn (giữ nguyên)
-                        : getSlotColor(slot) // Truyền toàn bộ object `slot` vào đây
-                    )}
-                  ></td>
+                    getSlotColor={getSlotColor}
+                  />
                 );
               })}
             </tr>

@@ -11,6 +11,7 @@ const Product = require("../models/products");
 const AuditLog = require("../models/audit_logs");
 const PaymentTransaction = require("../models/payment_transactions");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
+const { emitBookingChange } = require("../config/socket");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 

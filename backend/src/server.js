@@ -12,6 +12,9 @@ const tournamentCron = require("./jobs/tournamentCron");
 
 // dotenv.config();
 
+const http = require('http');
+const { initSocket } = require('./config/socket');
+
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
@@ -25,7 +28,10 @@ const startServer = async () => {
         autoRankJob();
         tournamentCron();
 
-        app.listen(PORT, () => {
+        const server = http.createServer(app);
+        initSocket(server);
+
+        server.listen(PORT, () => {
             console.log(`🚀 Server đang chạy tại: http://localhost:${PORT}`);
         });
     } catch (error) {

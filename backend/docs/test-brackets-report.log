@@ -10,7 +10,7 @@ RESPONSE STATUS: 401 Unauthorized
 RES BODY: {"success":false,"error_code":"INVALID_CREDENTIALS","message":"Email hoặc mật khẩu không đúng"}
 
 ---- [2) Generate Brackets - Unauthorized] ----
-REQUEST: POST http://localhost:5000/api/v1/tournaments/69fc52c116a2446c0bc2f9f0/brackets/generate
+REQUEST: POST http://localhost:5000/api/v1/tournaments/6a22779662f11c1c6b198227/brackets/generate
 REQ BODY: {
   "group_size": 4
 }
@@ -26,7 +26,7 @@ RESPONSE STATUS: 400 Bad Request
 RES BODY: {"success":false,"message":"ID giải đấu không đúng định dạng hợp lệ"}
 
 ---- [4) Generate Brackets - Status Not close_registration] ----
-REQUEST: POST http://localhost:5000/api/v1/tournaments/69fc52c116a2446c0bc2f9f0/brackets/generate
+REQUEST: POST http://localhost:5000/api/v1/tournaments/6a22779662f11c1c6b198227/brackets/generate
 REQ BODY: {
   "group_size": 4
 }
@@ -34,18 +34,18 @@ RESPONSE STATUS: 400 Bad Request
 RES BODY: {"success":false,"message":"Chỉ được xếp bảng khi giải đấu đang ở trạng thái close_registration."}
 
 ---- [5) Generate Brackets - Success] ----
-REQUEST: POST http://localhost:5000/api/v1/tournaments/69fc52c116a2446c0bc2f9f4/brackets/generate
+REQUEST: POST http://localhost:5000/api/v1/tournaments/6a22779662f11c1c6b19822b/brackets/generate
 REQ BODY: {
   "group_size": 4
 }
 RESPONSE STATUS: 200 OK
-RES BODY: {"success":true,"message":"Tạo bảng đấu thành công","data":[{"_id":"69fc52c4c2b882becd1fcf34","tournament_id":"69fc52c116a2446c0bc2f9f4","name":"Bảng A","participants":[{"_id":"69fc52c216a2446c0bc2f9f9","full_name":"Seed Bracket User 1","skill_rank":"A","elo_score":1600},{"_id":"69fc52c216a2446c0bc2f9fa","full_name":"Seed Bracket User 2","skill_rank":"B","elo_score":1450},{"_id":"69fc52c216a2446c0bc2f9fb","full_name":"Seed Bracket User 3","skill_rank":"C","elo_score":1300},{"_id":"69fc52c216a2446c0bc2f9fc","full_name":"Seed Bracket User 4","skill_rank":"D","elo_score":1100}],"status":"pending","is_deleted":false,"createdAt":"2026-05-07T08:52:20.653Z","updatedAt":"2026-05-07T08:52:20.653Z"}]}
+RES BODY: {"success":true,"message":"Tạo bảng đấu thành công","data":[{"_id":"6a2277985bd1e0c19a629826","tournament_id":"6a22779662f11c1c6b19822b","name":"Bảng A","participants":[{"_id":"6a22779662f11c1c6b19822f","full_name":"Seed Bracket User 1","skill_rank":"A","elo_score":1600},{"_id":"6a22779662f11c1c6b198230","full_name":"Seed Bracket User 2","skill_rank":"B","elo_score":1450},{"_id":"6a22779662f11c1c6b198231","full_name":"Seed Bracket User 3","skill_rank":"C","elo_score":1300},{"_id":"6a22779662f11c1c6b198232","full_name":"Seed Bracket User 4","skill_rank":"D","elo_score":1100}],"status":"pending","is_deleted":false,"createdAt":"2026-06-05T07:15:36.109Z","updatedAt":"2026-06-05T07:15:36.109Z"}]}
 
 ---- [6) Get Brackets - Success] ----
-REQUEST: GET http://localhost:5000/api/v1/tournaments/69fc52c116a2446c0bc2f9f4/brackets
+REQUEST: GET http://localhost:5000/api/v1/tournaments/6a22779662f11c1c6b19822b/brackets
 REQ BODY: (empty)
 RESPONSE STATUS: 200 OK
-RES BODY: {"success":true,"message":"Danh sách bảng đấu","data":[{"_id":"69fc52c4c2b882becd1fcf34","tournament_id":"69fc52c116a2446c0bc2f9f4","name":"Bảng A","participants":[{"_id":"69fc52c216a2446c0bc2f9f9","full_name":"Seed Bracket User 1","skill_rank":"A","elo_score":1600},{"_id":"69fc52c216a2446c0bc2f9fa","full_name":"Seed Bracket User 2","skill_rank":"B","elo_score":1450},{"_id":"69fc52c216a2446c0bc2f9fb","full_name":"Seed Bracket User 3","skill_rank":"C","elo_score":1300},{"_id":"69fc52c216a2446c0bc2f9fc","full_name":"Seed Bracket User 4","skill_rank":"D","elo_score":1100}],"status":"pending","is_deleted":false,"createdAt":"2026-05-07T08:52:20.653Z","updatedAt":"2026-05-07T08:52:20.653Z"}]}
+RES BODY: {"success":true,"message":"Danh sách bảng đấu","data":[{"_id":"6a2277985bd1e0c19a629826","tournament_id":"6a22779662f11c1c6b19822b","name":"Bảng A","participants":[{"_id":"6a22779662f11c1c6b19822f","full_name":"Seed Bracket User 1","skill_rank":"A","elo_score":1600},{"_id":"6a22779662f11c1c6b198230","full_name":"Seed Bracket User 2","skill_rank":"B","elo_score":1450},{"_id":"6a22779662f11c1c6b198231","full_name":"Seed Bracket User 3","skill_rank":"C","elo_score":1300},{"_id":"6a22779662f11c1c6b198232","full_name":"Seed Bracket User 4","skill_rank":"D","elo_score":1100}],"status":"pending","is_deleted":false,"createdAt":"2026-06-05T07:15:36.109Z","updatedAt":"2026-06-05T07:15:36.109Z"}]}
 
 === SUMMARY ===
 Assertions total: 11
