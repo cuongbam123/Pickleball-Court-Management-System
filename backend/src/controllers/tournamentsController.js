@@ -176,6 +176,36 @@ const getTournamentBrackets = async (req, res) => {
     });
   }
 };
+
+const initiateTournamentPayment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const paymentData = await tournamentService.initiateTournamentPayment(id, req.user, req.body, req);
+    return res.status(200).json({
+      success: true,
+      message: "Khởi tạo liên kết thanh toán giải đấu thành công",
+      data: paymentData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getParticipantPaymentStatus = async (req, res, next) => {
+  try {
+    const { participantId } = req.params;
+    const userId = req.user.userId || req.user._id || req.user.id;
+    const statusData = await tournamentService.getParticipantPaymentStatus(participantId, userId);
+    return res.status(200).json({
+      success: true,
+      message: "Lấy trạng thái thanh toán giải đấu thành công",
+      data: statusData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createNewTournament,
   getTournaments,
@@ -187,4 +217,6 @@ module.exports = {
   getParticipants,
   generateBrackets,
   getTournamentBrackets,
+  initiateTournamentPayment,
+  getParticipantPaymentStatus,
 };

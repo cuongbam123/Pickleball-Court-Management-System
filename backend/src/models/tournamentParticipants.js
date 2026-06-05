@@ -16,8 +16,25 @@ const tournamentParticipantSchema = new mongoose.Schema(
 
     payment_status: {
       type: String,
-      enum: ["pending", "paid"],
+      enum: ["pending", "paid", "expired", "failed"],
       default: "pending",
+    },
+
+    lifecycle: {
+      type: String,
+      enum: ["reserved", "confirmed", "cancelled", "expired"],
+      default: "reserved",
+    },
+
+    expires_at: {
+      type: Date,
+      default: null,
+    },
+
+    payment_transaction_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "payment_transactions",
+      default: null,
     },
 
     result: {
@@ -59,6 +76,9 @@ tournamentParticipantSchema.index({ user_id: 1 });
 
 // lọc theo payment
 tournamentParticipantSchema.index({ payment_status: 1 });
+
+// hỗ trợ worker tìm kiếm các đăng ký hết hạn giữ chỗ
+tournamentParticipantSchema.index({ lifecycle: 1, payment_status: 1, expires_at: 1 });
 
 // ================= MODEL =================
 const TournamentParticipant = mongoose.model(

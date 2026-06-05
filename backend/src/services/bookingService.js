@@ -16,7 +16,10 @@ const Order = require("../models/orders");
 const PricingRule = require("../models/pricing_rules");
 const AuditLog = require("../models/audit_logs");
 const User = require("../models/users");
+const PaymentTransaction = require("../models/payment_transactions");
+const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
+const { emitBookingChange } = require("../config/socket");
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
@@ -425,6 +428,8 @@ const holdBooking = async (body, user) => {
       is_deleted: false,
     });
 
+    emitBookingChange("create", createdBooking);
+
     return {
       booking_id: createdBooking._id,
       status: createdBooking.status,
@@ -463,56 +468,36 @@ const createDepositPaymentUrl = async (bookingId, body, req, user) => {
       "Chỉ những lịch đặt đang giữ chỗ mới có thể thanh toán cọc",
     );
   }
-  const tmnCode = process.env.VNP_TMN_CODE;
-  const secretKey = process.env.VNP_HASH_SECRET;
-  const vnpUrl = process.env.VNP_URL;
 
-  let ipAddr =
-    req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
-  if (ipAddr === "::1") {
+  let ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
+  if (ipAddr === "::1" || ipAddr === "::ffff:127.0.0.1") {
     ipAddr = "127.0.0.1";
   }
 
-  const now = new Date();
-  const createDate = format(toZonedTime(now, TIMEZONE), "yyyyMMddHHmmss");
-  const expireDate = format(
-    toZonedTime(new Date(now.getTime() + 10 * 60 * 1000), TIMEZONE),
-    "yyyyMMddHHmmss",
+  const vnpayRes = buildVnpayUrl({
+    txnRef: booking._id.toString(),
+    amount: booking.deposit_amount,
+    orderInfo: `Thanh toan tien coc lich dat san ${booking._id}`,
+    ipAddr,
+    returnUrl: redirect_url,
+    expireMinutes: 10,
+  });
+
+  // Tạo hoặc cập nhật giao dịch PaymentTransaction
+  await PaymentTransaction.findOneAndUpdate(
+    { reference_type: "Booking", reference_id: booking._id },
+    {
+      amount: booking.deposit_amount,
+      payment_method: "vnpay",
+      status: "pending",
+      expires_at: vnpayRes.expires_at,
+    },
+    { upsert: true, new: true }
   );
 
-  const amount = Math.round(booking.deposit_amount * 100);
-
-  let vnp_Params = {
-    vnp_Version: "2.1.0",
-    vnp_Command: "pay",
-    vnp_TmnCode: tmnCode,
-    vnp_Locale: "vn",
-    vnp_CurrCode: "VND",
-    vnp_TxnRef: booking._id.toString(),
-    vnp_OrderInfo: `Thanh toan tien coc lich dat san ${booking._id}`,
-    vnp_OrderType: "billpayment",
-    vnp_Amount: amount,
-    vnp_ReturnUrl: redirect_url,
-    vnp_IpAddr: ipAddr,
-    vnp_CreateDate: createDate,
-    vnp_ExpireDate: expireDate,
-  };
-
-  console.log("=== DỮ LIỆU GỬI SANG VNPAY ===");
-  console.log(vnp_Params);
-  // sắp xếp params vs tạo chữ kí
-  vnp_Params = sortObject(vnp_Params);
-  const signData = querystring.stringify(vnp_Params, { encode: false });
-  const hmac = crypto.createHmac("sha512", secretKey);
-  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-  vnp_Params["vnp_SecureHash"] = signed;
-
-  const paymentUrl =
-    vnpUrl + "?" + querystring.stringify(vnp_Params, { encode: false });
-
   return {
-    payment_url: paymentUrl,
-    expires_at: addMinutes(now, 10),
+    payment_url: vnpayRes.payment_url,
+    expires_at: vnpayRes.expires_at,
   };
 };
 
@@ -530,7 +515,7 @@ function sortObject(obj) {
   return sorted;
 }
 
-const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
+const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null) => {
   const session = await mongoose.startSession();
   console.log("vnp_Amount", vnp_Amount)
 
@@ -548,6 +533,20 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
 
       if (booking.status !== "holding") {
         throw new Error("02");
+      }
+
+      // Cập nhật giao dịch PaymentTransaction sang paid
+      const transaction = await PaymentTransaction.findOne({
+        reference_type: "Booking",
+        reference_id: bookingId,
+      }).session(session);
+
+      if (transaction) {
+        transaction.status = "paid";
+        if (transactionNo) {
+          transaction.webhook_transaction_id = transactionNo;
+        }
+        await transaction.save({ session });
       }
 
       booking.status = "deposited";
@@ -589,6 +588,8 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount) => {
         is_deleted: false,
       });
     });
+
+    emitBookingChange("update", booking);
 
     return true;
   } catch (error) {
@@ -680,6 +681,10 @@ const updateBookingStatus = async (bookingId, newStatus, user) => {
 
       updatedBooking = booking;
     });
+
+    if (updatedBooking) {
+      emitBookingChange("update", updatedBooking);
+    }
 
     return updatedBooking;
   } catch (error) {
@@ -833,6 +838,11 @@ const cancelBooking = async (bookingId, reason, user) => {
         },
       };
     });
+
+    if (cancelledBooking?.booking) {
+      emitBookingChange("cancel", cancelledBooking.booking);
+    }
+
     return cancelledBooking;
   } catch (error) {
     throw error;

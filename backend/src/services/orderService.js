@@ -9,6 +9,9 @@ const Order = require("../models/orders");
 const Booking = require("../models/bookings");
 const Product = require("../models/products");
 const AuditLog = require("../models/audit_logs");
+const PaymentTransaction = require("../models/payment_transactions");
+const { buildVnpayUrl } = require("../utils/vnpayHelper");
+const { emitBookingChange } = require("../config/socket");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -208,52 +211,39 @@ const createDepositPaymentUrl = async (orderId, body, req, user) => {
     throw new Error("Hóa đơn không có dư nợ để thanh toán");
   }
 
-  const tmnCode = process.env.VNP_TMN_CODE;
-  const secretKey = process.env.VNP_HASH_SECRET;
-  const vnpUrl = process.env.VNP_URL;
-  
   let ipAddr = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "127.0.0.1";
   if (ipAddr === "::1" || ipAddr === "::ffff:127.0.0.1") ipAddr = "127.0.0.1";
 
-  const now = new Date();
-  const createDate = formatInTimeZone(now, TIME_ZONE, "yyyyMMddHHmmss");
-  const expireDate = formatInTimeZone(addMinutes(now, 10), TIME_ZONE, "yyyyMMddHHmmss");
-
-  const amount = Math.round(order.final_amount_due * 100); 
-
   const txnRef = `O_${order._id.toString()}`;
 
-  let vnp_Params = {
-    vnp_Version: "2.1.0",
-    vnp_Command: "pay",
-    vnp_TmnCode: tmnCode,
-    vnp_Locale: "vn",
-    vnp_CurrCode: "VND",
-    vnp_TxnRef: txnRef, 
-    vnp_OrderInfo: `Thanh toan tong hoa don ${order._id}`,
-    vnp_OrderType: "billpayment",
-    vnp_Amount: amount,
-    vnp_ReturnUrl: redirect_url,
-    vnp_IpAddr: ipAddr,
-    vnp_CreateDate: createDate,
-    vnp_ExpireDate: expireDate,
-  };
+  const vnpayRes = buildVnpayUrl({
+    txnRef,
+    amount: order.final_amount_due,
+    orderInfo: `Thanh toan tong hoa don ${order._id}`,
+    ipAddr,
+    returnUrl: redirect_url,
+    expireMinutes: 10,
+  });
 
-  vnp_Params = sortObject(vnp_Params);
-  const signData = querystring.stringify(vnp_Params, { encode: false });
-  const hmac = crypto.createHmac("sha512", secretKey);
-  const signed = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
-  vnp_Params["vnp_SecureHash"] = signed;
-
-  const paymentUrl = vnpUrl + "?" + querystring.stringify(vnp_Params, { encode: false });
+  // Tạo hoặc cập nhật giao dịch PaymentTransaction
+  await PaymentTransaction.findOneAndUpdate(
+    { reference_type: "Order", reference_id: order._id },
+    {
+      amount: order.final_amount_due,
+      payment_method: "vnpay",
+      status: "pending",
+      expires_at: vnpayRes.expires_at,
+    },
+    { upsert: true, new: true }
+  );
 
   return {
-    payment_url: paymentUrl,
-    expires_at: addMinutes(now, 10),
+    payment_url: vnpayRes.payment_url,
+    expires_at: vnpayRes.expires_at,
   };
 };
 
-const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
+const confirmOrderFinalPayment = async (orderId, vnp_Amount, transactionNo = null) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -265,10 +255,23 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount) => {
     
     if (order.payment_status === "fully_paid") throw new Error("02"); 
 
+    // Cập nhật giao dịch PaymentTransaction sang paid
+    const transaction = await PaymentTransaction.findOne({
+      reference_type: "Order",
+      reference_id: orderId,
+    }).session(session);
+
+    if (transaction) {
+      transaction.status = "paid";
+      if (transactionNo) {
+        transaction.webhook_transaction_id = transactionNo;
+      }
+      await transaction.save({ session });
+    }
+
     order.payment_status = "fully_paid";
     order.payment_method = "vnpay";
     await order.save({ session });
-
 
     const booking = await Booking.findById(order.booking_id).session(session);
     if (booking) {
@@ -326,6 +329,21 @@ const checkoutOrder = async (orderId, payment_method, amount_received, user) => 
       );
     }
 
+    // Ghi nhận PaymentTransaction cho hóa đơn checkout trực tiếp (tiền mặt / chuyển khoản)
+    await PaymentTransaction.create(
+      [
+        {
+          reference_type: "Order",
+          reference_id: orderId,
+          amount: order.final_amount_due,
+          payment_method: payment_method,
+          status: "paid",
+          expires_at: new Date(),
+        },
+      ],
+      { session }
+    );
+
     order.payment_status = "fully_paid";
     order.payment_method = payment_method;
 
@@ -364,9 +382,6 @@ const checkoutOrder = async (orderId, payment_method, amount_received, user) => 
 };
 
 const addPosItemsToOrder = async (orderId, items, user) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");

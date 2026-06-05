@@ -15,6 +15,8 @@ router.get(
   tournamentController.getTournamentBrackets
 );
 router.post("/:id/participants", validate(registerForTournamentValidation), authenticate,authorizeRoles("user"), tournamentController.registerForTournament);
+router.post("/:id/payment", authenticate, tournamentController.initiateTournamentPayment);
+router.get("/payment/:participantId/status", authenticate, tournamentController.getParticipantPaymentStatus);
 //ADMIN
 router.post(
     "/",
