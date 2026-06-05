@@ -25,11 +25,20 @@ export const useTimeGrid = (
   // Refs để lưu giá trị mới nhất của selectedSlots mà không gây re-bind socket listener liên tục
   const selectedSlotsRef = useRef(selectedSlots);
   const setSelectedSlotsRef = useRef(setSelectedSlots);
+  const activeTimersRef = useRef([]);
 
   useEffect(() => {
     selectedSlotsRef.current = selectedSlots;
     setSelectedSlotsRef.current = setSelectedSlots;
   }, [selectedSlots, setSelectedSlots]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup all active timers on unmount to prevent state updates on unmounted components
+      activeTimersRef.current.forEach((timerId) => clearTimeout(timerId));
+      activeTimersRef.current = [];
+    };
+  }, []);
 
   const fetchGridData = useCallback(async () => {
     if (!branchId || !date) {
@@ -230,15 +239,23 @@ export const useTimeGrid = (
         };
       }
 
+      // Lưu trữ các key cần cập nhật để tắt cờ isNewUpdate sau đó
+      const updatedKeys = [];
+      for (let hour = startH; hour < endH; hour++) {
+        const startTimeStr = `${hour.toString().padStart(2, "0")}:00`;
+        const key = `${targetCourtId}_${startTimeStr}`;
+        updatedKeys.push(key);
+      }
+
       setSlotsMap((prevMap) => {
         const nextMap = { ...prevMap };
         let conflictSlots = [];
 
-        for (let hour = startH; hour < endH; hour++) {
-          const startTimeStr = `${hour.toString().padStart(2, "0")}:00`;
-          const key = `${targetCourtId}_${startTimeStr}`;
-
+        updatedKeys.forEach((key) => {
           if (nextMap[key]) {
+            const hour = parseInt(key.split("_")[1].split(":")[0]);
+            const startTimeStr = `${hour.toString().padStart(2, "0")}:00`;
+
             // Kiểm tra Race Condition: nếu ô này có người đặt mất khi user đang chọn
             if (newStatus !== "available" && setSelectedSlotsRef.current && selectedSlotsRef.current.length > 0) {
               const isSelected = selectedSlotsRef.current.some(
@@ -256,25 +273,8 @@ export const useTimeGrid = (
               bookingInfo: newBookingInfo,
               isNewUpdate: true, // bật cờ animation nhấp nháy
             };
-
-            // Tự động tắt cờ nhấp nháy sau 1.5s
-            const currentKey = key;
-            setTimeout(() => {
-              setSlotsMap((latestMap) => {
-                if (latestMap[currentKey] && latestMap[currentKey].isNewUpdate) {
-                  return {
-                    ...latestMap,
-                    [currentKey]: {
-                      ...latestMap[currentKey],
-                      isNewUpdate: false,
-                    },
-                  };
-                }
-                return latestMap;
-              });
-            }, 1500);
           }
-        }
+        });
 
         // Xử lý Xung đột và loại bỏ khỏi selectedSlots
         if (conflictSlots.length > 0 && setSelectedSlotsRef.current) {
@@ -297,6 +297,30 @@ export const useTimeGrid = (
 
         return nextMap;
       });
+
+      // Tự động tắt cờ nhấp nháy sau 1.5s
+      if (updatedKeys.length > 0) {
+        const timerId = setTimeout(() => {
+          setSlotsMap((latestMap) => {
+            const nextMap = { ...latestMap };
+            let hasChanged = false;
+            updatedKeys.forEach((key) => {
+              if (nextMap[key] && nextMap[key].isNewUpdate) {
+                nextMap[key] = {
+                  ...nextMap[key],
+                  isNewUpdate: false,
+                };
+                hasChanged = true;
+              }
+            });
+            return hasChanged ? nextMap : latestMap;
+          });
+          // Xóa timer khỏi danh sách active
+          activeTimersRef.current = activeTimersRef.current.filter((t) => t !== timerId);
+        }, 1500);
+
+        activeTimersRef.current.push(timerId);
+      }
     };
 
     const handleCourtUpdated = (updatedCourt) => {
