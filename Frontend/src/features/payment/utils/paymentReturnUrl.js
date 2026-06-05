@@ -1,4 +1,7 @@
 export const getPaymentResultReturnUrl = () => {
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/payment-result`;
+  }
   return "http://localhost:5173/payment-result";
 };
 
