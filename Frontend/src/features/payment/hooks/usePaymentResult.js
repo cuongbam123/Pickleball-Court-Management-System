@@ -4,7 +4,7 @@ import { checkPaymentStatus } from "../api/paymentApi";
 
 const MAX_POLL_ATTEMPTS = 10;
 const POLL_INTERVAL_MS = 3000;
-const SUCCESS_STATUSES = ["deposit_paid", "fully_paid"];
+const SUCCESS_STATUSES = ["deposit_paid", "fully_paid", "paid"];
 
 export const usePaymentResult = () => {
   const [searchParams] = useSearchParams();

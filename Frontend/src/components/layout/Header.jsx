@@ -82,6 +82,12 @@ const Header = ({ onLogout }) => {
               Giải đấu
             </Link>
             <Link
+              to="/shared-matches"
+              className="px-3.5 py-2 rounded-xl text-sm font-semibold text-white hover:text-lime-400 hover:bg-white/5 transition-all duration-200"
+            >
+              Trận chia sẻ
+            </Link>
+            <Link
               to="/ranking"
               className="px-3.5 py-2 rounded-xl text-sm font-semibold text-white hover:text-lime-400 hover:bg-white/5 transition-all duration-200"
             >
