@@ -251,13 +251,13 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount, transactionNo = nul
     if (!order) throw new Error("01");
 
     if (order.final_amount_due !== vnp_Amount) throw new Error("04");
-    
-    if (order.payment_status === "fully_paid") throw new Error("02"); 
+
+    if (order.payment_status === "fully_paid") throw new Error("02");
 
     // Cập nhật giao dịch PaymentTransaction sang paid
     const transaction = await PaymentTransaction.findOne({
       reference_type: "Order",
-      reference_id: orderId,
+      reference_id: order._id,
     }).session(session);
 
     if (transaction) {
@@ -381,8 +381,11 @@ const checkoutOrder = async (orderId, payment_method, amount_received, user) => 
 };
 
 const addPosItemsToOrder = async (orderId, items, user) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const order = await Order.findById(orderId).session(session);
+    console.log("ditconmemay", order);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
     assertCanAccessOrder(order, user);
     if (order.payment_status === "fully_paid")
