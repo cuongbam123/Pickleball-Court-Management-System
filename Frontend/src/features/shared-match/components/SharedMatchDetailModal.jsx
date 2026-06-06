@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Building2,
   CalendarDays,
+  ChevronDown,
   Clock,
   CreditCard,
   Loader2,
@@ -64,6 +65,7 @@ const SharedMatchDetailModal = ({
   onJoin,
 }) => {
   const [showJoinConfirm, setShowJoinConfirm] = useState(false);
+  const [showMatchInfo, setShowMatchInfo] = useState(false);
 
   const branchMap = useMemo(
     () => Object.fromEntries(branches.map((branch) => [branch._id, branch])),
@@ -95,6 +97,7 @@ const SharedMatchDetailModal = ({
   const handleClose = () => {
     if (isJoining) return;
     setShowJoinConfirm(false);
+    setShowMatchInfo(false);
     onClose?.();
   };
 
@@ -131,7 +134,41 @@ const SharedMatchDetailModal = ({
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="grid gap-7 p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-8 lg:p-8">
-            <section className="min-w-0">
+            <section className="min-w-0 sm:hidden">
+              <button
+                type="button"
+                onClick={() => setShowMatchInfo((current) => !current)}
+                aria-expanded={showMatchInfo}
+                className="mb-4 flex w-full items-center justify-between gap-3 border-b border-slate-200 pb-3 text-left text-xs font-extrabold uppercase tracking-wide text-slate-600"
+              >
+                <span className="flex items-center gap-2">
+                  <Ticket size={18} className="text-orange-500" />
+                  Thông tin ca ghép
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`shrink-0 transition-transform ${
+                    showMatchInfo ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {showMatchInfo && (
+                <MatchInfoContent
+                  date={date}
+                  time={time}
+                  branchName={branch?.name}
+                  courtName={court?.name}
+                  ticketPrice={ticketPrice}
+                  status={STATUS_LABELS[match.status] || match.status}
+                  bookedSlots={bookedSlots}
+                  maxSlots={maxSlots}
+                  progress={progress}
+                />
+              )}
+            </section>
+
+            <section className="hidden min-w-0 sm:block">
               <SectionTitle icon={Ticket} title="Thông tin ca ghép" />
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
@@ -334,6 +371,53 @@ const SectionTitle = ({ icon: Icon, title, iconClassName = "text-orange-500" }) 
     <Icon size={18} className={iconClassName} />
     {title}
   </h3>
+);
+
+const MatchInfoContent = ({
+  date,
+  time,
+  branchName,
+  courtName,
+  ticketPrice,
+  status,
+  bookedSlots,
+  maxSlots,
+  progress,
+}) => (
+  <>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+      <InfoItem icon={<CalendarDays size={18} />} label="Ngày" value={date} />
+      <InfoItem icon={<Clock size={18} />} label="Giờ" value={time} />
+      <InfoItem
+        icon={<MapPin size={18} />}
+        label="Chi nhánh"
+        value={branchName || "Không xác định"}
+      />
+      <InfoItem
+        icon={<Building2 size={18} />}
+        label="Sân"
+        value={courtName || "Không xác định"}
+      />
+      <InfoItem
+        label="Giá vé"
+        value={`${ticketPrice.toLocaleString("vi-VN")} đ`}
+      />
+      <InfoItem label="Trạng thái" value={status} />
+    </div>
+
+    <div className="mt-6">
+      <p className="mb-3 text-sm font-bold text-slate-600 sm:text-base">
+        Slot: {bookedSlots} / {maxSlots}
+      </p>
+
+      <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+        <div
+          className="h-full rounded-full bg-emerald-700"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+    </div>
+  </>
 );
 
 const InfoItem = ({ icon, label, value }) => (
