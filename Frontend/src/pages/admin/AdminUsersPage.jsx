@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import useAdminUsers from "../../features/admin/hooks/useAdminUsers";
 import useAdminStaff from "../../features/admin/hooks/useAdminStaff";
@@ -7,6 +7,7 @@ import Table from "../../components/ui/Table";
 import clsx from "clsx";
 import Modal from "../../components/ui/Modal";
 import SelectFilter from "../../components/ui/Filter";
+import Pagination from "../../components/ui/Pagination";
 import { useAuthStore } from "../../store/authStore";
 import { Search } from "lucide-react";
 import dayjs from "dayjs";
@@ -19,7 +20,7 @@ const DetailItem = ({ label, value }) => (
 );
 
 const AdminUsersPage = () => {
-  const { users, isLoading, fetchUsers } = useAdminUsers();
+  const { users, meta, isLoading, fetchUsers } = useAdminUsers();
   const [viewMode, setViewMode] = useState("table");
   const {
     branches,
@@ -35,10 +36,36 @@ const AdminUsersPage = () => {
   const [searchName, setSearchName] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [selectedDetailUser, setSelectedDetailUser] = useState(null);
   const currentUser = useAuthStore((s) => s.user);
 
   const selectedUser = users.find((user) => user._id === userToUpdate) || null;
+  const totalRecords = meta?.total_records || users.length;
+  const totalPages = meta?.total_pages || 1;
+  const currentPage = meta?.page || page;
+  const currentLimit = meta?.limit || limit;
+  const startRecord = totalRecords
+    ? (currentPage - 1) * currentLimit + 1
+    : 0;
+  const endRecord = totalRecords
+    ? Math.min(currentPage * currentLimit, totalRecords)
+    : 0;
+
+  const getUserQueryParams = (overrides = {}) => ({
+    page,
+    limit,
+    role: selectedRole || undefined,
+    search: searchName || undefined,
+    sortBy,
+    sortOrder,
+    ...overrides,
+  });
+
+  const fetchUsersWithParams = (overrides = {}) => {
+    fetchUsers(getUserQueryParams(overrides));
+  };
 
   const openDeleteModal = (userId) => {
     setUserToDelete(userId);
@@ -56,12 +83,7 @@ const AdminUsersPage = () => {
     if (result.success) {
       alert("Cập nhật thành công");
       setUserToUpdate(null);
-      fetchUsers({
-        role: selectedRole || undefined,
-        search: searchName || undefined,
-        sortBy,
-        sortOrder,
-      });
+      fetchUsersWithParams();
     } else {
       alert("Cập nhật thất bại");
     }
@@ -76,12 +98,7 @@ const AdminUsersPage = () => {
         elo_score: formData.elo_score,
       });
       if (rankUpdateResult.success) {
-        fetchUsers({
-          role: selectedRole || undefined,
-          search: searchName || undefined,
-          sortBy,
-          sortOrder,
-        });
+        fetchUsersWithParams();
       } else {
         alert("Cập nhật rank thất bại");
       }
@@ -96,12 +113,7 @@ const AdminUsersPage = () => {
     if (result.success) {
       alert("Xóa thành công");
       closeDeleteModal();
-      fetchUsers({
-        role: selectedRole || undefined,
-        search: searchName || undefined,
-        sortBy,
-        sortOrder,
-      });
+      fetchUsersWithParams();
     } else {
       alert("Xóa thất bại");
     }
@@ -109,21 +121,32 @@ const AdminUsersPage = () => {
 
   const handleRoleChange = (value) => {
     setSelectedRole(value);
-    fetchUsers({
+    setPage(1);
+    fetchUsersWithParams({
+      page: 1,
       role: value || undefined,
-      search: searchName || undefined,
-      sortBy,
-      sortOrder,
     });
   };
 
   const handleSearchByName = () => {
-    fetchUsers({
-      role: selectedRole || undefined,
-      search: searchName || undefined,
-      sortBy,
-      sortOrder,
-    });
+    setPage(1);
+    fetchUsersWithParams({ page: 1 });
+  };
+
+  const handlePageChange = (nextPage) => {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === currentPage) {
+      return;
+    }
+
+    setPage(nextPage);
+    fetchUsersWithParams({ page: nextPage });
+  };
+
+  const handleLimitChange = (value) => {
+    const nextLimit = Number(value);
+    setLimit(nextLimit);
+    setPage(1);
+    fetchUsersWithParams({ page: 1, limit: nextLimit });
   };
 
   const isFiltered = Boolean(selectedRole || searchName);
@@ -354,11 +377,10 @@ const AdminUsersPage = () => {
             value={sortBy}
             onChange={(value) => {
               setSortBy(value);
-              fetchUsers({
-                role: selectedRole || undefined,
-                search: searchName || undefined,
+              setPage(1);
+              fetchUsersWithParams({
+                page: 1,
                 sortBy: value,
-                sortOrder,
               });
             }}
             className="w-56"
@@ -372,10 +394,9 @@ const AdminUsersPage = () => {
             value={sortOrder}
             onChange={(value) => {
               setSortOrder(value);
-              fetchUsers({
-                role: selectedRole || undefined,
-                search: searchName || undefined,
-                sortBy,
+              setPage(1);
+              fetchUsersWithParams({
+                page: 1,
                 sortOrder: value,
               });
             }}
@@ -401,6 +422,19 @@ const AdminUsersPage = () => {
               ? "Không có tài khoản khớp bộ lọc hoặc từ khóa tìm kiếm. Thử đổi điều kiện."
               : "Danh sách người dùng đang trống."
           }
+        />
+
+        <Pagination
+          page={currentPage}
+          limit={currentLimit}
+          totalRecords={totalRecords}
+          totalPages={totalPages}
+          startRecord={startRecord}
+          endRecord={endRecord}
+          isLoading={isLoading}
+          itemLabel="người dùng"
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
         />
       </div>
 
@@ -559,3 +593,4 @@ const AdminUsersPage = () => {
 };
 
 export default AdminUsersPage;
+
