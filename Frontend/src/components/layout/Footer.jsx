@@ -19,7 +19,7 @@ const Footer = () => {
             <h3 className="text-xs font-extrabold uppercase tracking-wider text-black">Khám phá</h3>
             <div className="flex flex-col gap-2.5 text-sm text-slate-700">
               <Link to="/booking" className="hover:text-primary-dark transition-colors">Đặt sân</Link>
-              <Link to="/shared-match" className="hover:text-primary-dark transition-colors">Sân ghép</Link>
+              <Link to="/shared-matches" className="hover:text-primary-dark transition-colors">Sân ghép</Link>
               <Link to="/tournaments" className="hover:text-primary-dark transition-colors">Giải đấu</Link>
               <Link to="/ranking" className="hover:text-primary-dark transition-colors">Xếp hạng</Link>
             </div>

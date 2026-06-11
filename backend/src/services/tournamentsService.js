@@ -924,7 +924,7 @@ const confirmTournamentPayment = async (participantId, vnpAmount, vnpTransaction
 
     const transaction = await PaymentTransaction.findOne({
       reference_type: "TournamentParticipant",
-      reference_id: participantId,
+      reference_id: participant._id,
     }).session(session);
 
     if (transaction) {
@@ -1010,7 +1010,7 @@ const getParticipantPaymentStatus = async (participantId, userId) => {
 
   const transaction = await PaymentTransaction.findOne({
     reference_type: "TournamentParticipant",
-    reference_id: participantId,
+    reference_id: participant._id,
   }).lean();
 
   return {

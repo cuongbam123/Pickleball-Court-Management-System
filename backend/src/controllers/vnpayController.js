@@ -175,7 +175,7 @@ const getPaymentStatus = async (req, res, next) => {
 
     // --- TRƯỜNG HỢP 1: THANH TOÁN TỔNG BILL (FINAL PAYMENT) ---
     if (isFinalPayment) {
-      const order = await Order.findOne({ _id: referenceId, is_deleted: false })
+      let order = await Order.findOne({ _id: referenceId, is_deleted: false })
         .populate("booking_id", "status start_time end_time")
         .lean();
 
@@ -186,6 +186,21 @@ const getPaymentStatus = async (req, res, next) => {
       }
 
       ensureCanViewPayment(order.user_id, req.user, allowSignedReturn);
+
+      // Fallback confirmation on read if VNPay confirmed success
+      if (isVnpaySuccess) {
+        try {
+          await orderService.confirmOrderFinalPayment(order._id.toString(), order.final_amount_due, req.query.vnp_TransactionNo);
+          // Re-fetch order
+          order = await Order.findOne({ _id: referenceId, is_deleted: false })
+            .populate("booking_id", "status start_time end_time")
+            .lean();
+        } catch (error) {
+          if (error.message !== "02") {
+            console.error("Lỗi xác nhận thanh toán hóa đơn trong getPaymentStatus:", error);
+          }
+        }
+      }
 
       // Ưu tiên Success nếu DB đã update HOẶC URL VNPay báo thành công
       let paymentStatus = order.payment_status;
@@ -216,8 +231,8 @@ const getPaymentStatus = async (req, res, next) => {
       });
     }
 
-    // --- TRƯỜNG HỢP 2: THANH TOÁN CỌC (DEPOSIT) ---
-    const booking = await Booking.findOne({ _id: referenceId, is_deleted: false }).lean();
+    // --- TRƯỜNG HỢP 2: THANH TOÁN CỌC (DEPOSIT) --- 
+    let booking = await Booking.findOne({ _id: referenceId, is_deleted: false }).lean();
     if (!booking) {
       const error = new Error("Không tìm thấy lịch đặt sân");
       error.status = 404;
@@ -225,6 +240,19 @@ const getPaymentStatus = async (req, res, next) => {
     }
 
     ensureCanViewPayment(booking.user_id, req.user, allowSignedReturn);
+
+    // Fallback confirmation on read if VNPay confirmed success
+    if (isVnpaySuccess) {
+      try {
+        await bookingService.confirmBookingDeposit(booking._id.toString(), booking.deposit_amount, req.query.vnp_TransactionNo);
+        // Re-fetch booking after update to get the latest status
+        booking = await Booking.findOne({ _id: referenceId, is_deleted: false }).lean();
+      } catch (error) {
+        if (error.message !== "02") {
+          console.error("Lỗi xác nhận thanh toán cọc trong getPaymentStatus:", error);
+        }
+      }
+    }
 
     const order = await Order.findOne({
       booking_id: booking._id,
@@ -357,12 +385,22 @@ const vnpayReturn = async (req, res) => {
     const vnp_Amount = vnp_Params["vnp_Amount"] / 100;
     const responseCode = vnp_Params["vnp_ResponseCode"];
     if (responseCode === "00") {
-      if (txnRef.startsWith("ST_")) {
-        try {
+      try {
+        if (txnRef.startsWith("O_")) {
+          const orderId = txnRef.split("O_")[1];
+          await orderService.confirmOrderFinalPayment(orderId, vnp_Amount, vnp_Params["vnp_TransactionNo"]);
+        } else if (txnRef.startsWith("ST_")) {
           const ticketId = txnRef.split("ST_")[1];
           await sharedMatchService.confirmSharedTicketPayment(ticketId, vnp_Amount);
-        } catch (error) {
-          console.error("Lỗi xác nhận thanh toán vé ghép từ Return URL:", error);
+        } else if (txnRef.startsWith("TP_")) {
+          const participantId = txnRef.split("TP_")[1];
+          await tournamentsService.confirmTournamentPayment(participantId, vnp_Amount, vnp_Params["vnp_TransactionNo"]);
+        } else {
+          await bookingService.confirmBookingDeposit(txnRef, vnp_Amount, vnp_Params["vnp_TransactionNo"]);
+        }
+      } catch (error) {
+        if (error.message !== "02") {
+          console.error("Lỗi xác nhận thanh toán từ Return URL:", error);
           return res.status(200).json({
             success: false,
             message: "Giao dịch thành công nhưng cập nhật trạng thái thất bại",

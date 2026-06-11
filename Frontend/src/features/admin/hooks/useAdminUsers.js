@@ -4,6 +4,7 @@ import { getUsers } from "../../admin/api/adminApi";
 
 const useAdminUsers = () => {
   const [users, setUsers] = useState([]);
+  const [meta, setMeta] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Fetch users from the API
@@ -12,6 +13,7 @@ const useAdminUsers = () => {
     try {
       const response = await getUsers(params);
       setUsers(response.data?.data || response.data || []);
+      setMeta(response.data?.meta || null);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
@@ -23,7 +25,7 @@ const useAdminUsers = () => {
     fetchUsers();
   }, []);
 
-  return { users, isLoading, fetchUsers, setUsers };
+  return { users, meta, isLoading, fetchUsers, setUsers };
 };
 
 export default useAdminUsers;

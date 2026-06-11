@@ -4,11 +4,11 @@ import StaffLayout from "../../layouts/StaffLayout";
 import Button from "../../components/ui/Button";
 import Table from "../../components/ui/Table";
 import { useOrderCheckout } from "../../features/order/hooks/useOrderCheckout";
-import { 
-  ArrowLeft, 
-  AlertTriangle, 
-  CreditCard, 
-  ReceiptText, 
+import {
+  ArrowLeft,
+  AlertTriangle,
+  CreditCard,
+  ReceiptText,
   Banknote,
   RefreshCw,
   Plus,
@@ -16,6 +16,7 @@ import {
   Trash2,
   Search,
   ShoppingBag,
+  Loader2,
 } from "lucide-react";
 import Spiral from "../../components/ui/Spiral";
 
@@ -43,7 +44,7 @@ const formatCurrency = (amount) => {
 const StaffCheckoutPage = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  
+
   // State quản lý phương thức thanh toán UI chọn
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [amountReceived, setAmountReceived] = useState(""); // Lưu tiền khách đưa
@@ -124,35 +125,35 @@ const StaffCheckoutPage = () => {
           </div>
         ),
     },
-    { 
-      header: "Đơn giá", 
+    {
+      header: "Đơn giá",
       accessor: "price",
       render: (row) => formatCurrency(row.price)
     },
-    { 
-      header: "Thành tiền", 
+    {
+      header: "Thành tiền",
       accessor: "total_amount",
       align: "right",
       render: (row) => formatCurrency(row.total_amount)
     },
     ...(!isOrderLocked
       ? [
-          {
-            header: "",
-            align: "right",
-            render: (row) => (
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={() => handleUpdatePosQuantity(row.product_id, 0)}
-                className="rounded p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-40"
-                title="Xóa khỏi hóa đơn"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            ),
-          },
-        ]
+        {
+          header: "",
+          align: "right",
+          render: (row) => (
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => handleUpdatePosQuantity(row.product_id, 0)}
+              className="rounded p-1.5 text-red-500 hover:bg-red-50 disabled:opacity-40"
+              title="Xóa khỏi hóa đơn"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ),
+        },
+      ]
       : []),
   ];
 
@@ -230,10 +231,10 @@ const StaffCheckoutPage = () => {
 
       {/* GRID LAYOUT: Left (Details) - Right (Summary) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        
+
         {/* === CỘT TRÁI: CHI TIẾT === */}
         <div className="lg:col-span-2 space-y-6">
-          
+
           {/* Card: Thông tin tiền sân */}
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4 border-b border-slate-100 pb-3">
@@ -255,7 +256,7 @@ const StaffCheckoutPage = () => {
               </div>
               <span className="font-bold text-emerald-600">{formatCurrency(posFee)}</span>
             </div>
-            
+
             {!isOrderLocked && (
               <div className="mb-5 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
                 <div className="mb-3 flex items-center gap-2">
@@ -371,7 +372,7 @@ const StaffCheckoutPage = () => {
             <div className="bg-slate-800 p-4 text-white">
               <h2 className="text-lg font-semibold">Tổng kết thanh toán</h2>
             </div>
-            
+
             <div className="p-5 space-y-4">
               {/* Breakdown tính tiền */}
               <div className="space-y-3 text-sm">
@@ -411,11 +412,10 @@ const StaffCheckoutPage = () => {
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <button
                       onClick={() => setPaymentMethod("cash")}
-                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${
-                        paymentMethod === "cash" 
-                          ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600" 
+                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${paymentMethod === "cash"
+                          ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                        }`}
                     >
                       <Banknote className="h-6 w-6" />
                       <span className="text-sm font-medium">Tiền mặt</span>
@@ -423,11 +423,10 @@ const StaffCheckoutPage = () => {
 
                     <button
                       onClick={() => setPaymentMethod("transfer")}
-                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${
-                        paymentMethod === "transfer"
+                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${paymentMethod === "transfer"
                           ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                        }`}
                     >
                       <CreditCard className="h-6 w-6" />
                       <span className="text-sm font-medium">Chuyển khoản</span>
@@ -435,11 +434,10 @@ const StaffCheckoutPage = () => {
 
                     <button
                       onClick={() => setPaymentMethod("vnpay")}
-                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${
-                        paymentMethod === "vnpay"
+                      className={`flex flex-col items-center justify-center gap-2 rounded-lg border p-3 transition ${paymentMethod === "vnpay"
                           ? "border-blue-600 bg-blue-50 text-blue-700 ring-1 ring-blue-600"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      }`}
+                        }`}
                     >
                       <CreditCard className="h-6 w-6" />
                       <span className="text-sm font-medium">VNPay</span>
@@ -465,9 +463,8 @@ const StaffCheckoutPage = () => {
                       {Number(amountReceived) > 0 && (
                         <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 p-3 text-sm border border-slate-100">
                           <span className="text-slate-600 font-medium">Tiền trả lại khách:</span>
-                          <span className={`font-bold text-lg ${
-                            Number(amountReceived) < remainingBalance ? "text-red-500" : "text-emerald-600"
-                          }`}>
+                          <span className={`font-bold text-lg ${Number(amountReceived) < remainingBalance ? "text-red-500" : "text-emerald-600"
+                            }`}>
                             {Number(amountReceived) < remainingBalance
                               ? "Khách đưa thiếu!"
                               : formatCurrency(Number(amountReceived) - remainingBalance)}

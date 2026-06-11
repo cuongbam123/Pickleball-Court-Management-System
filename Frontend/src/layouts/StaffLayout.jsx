@@ -9,6 +9,7 @@ const staffItems = [
   { label: "POS", to: "/pos" },
   { label: "Khách tại quầy", to: "/walk-in" },
   { label: "Lịch sân", to: "/admin/booking-history" },
+  { label: "Doanh thu", to: "/admin/revenues" },
 ];
 
 const StaffLayout = ({ children }) => {
