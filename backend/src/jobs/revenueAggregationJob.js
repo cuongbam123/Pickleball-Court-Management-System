@@ -17,8 +17,6 @@ const revenueAggregationJob = () => {
         const checkDate = new Date(zonedNow.getTime() - i * 24 * 60 * 60 * 1000);
         const checkDateStr = format(checkDate, "yyyy-MM-dd", { timeZone: TIMEZONE });
         
-        // Xóa bản ghi cũ của ngày này để đảm bảo dữ liệu được cập nhật mới nhất từ các giao dịch thực tế
-        await RevenueByDay.deleteMany({ date: checkDateStr });
         console.log(`[revenueAggregationJob] Đang đồng bộ lại dữ liệu doanh thu ngày ${checkDateStr}...`);
         await reportService.aggregateAndSaveRevenue(checkDateStr);
       }

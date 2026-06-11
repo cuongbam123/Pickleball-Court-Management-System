@@ -538,24 +538,12 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
         reference_id: booking._id,
       }).session(session);
 
-      const fs = require('fs');
-      fs.appendFileSync('f:/pickleball/Pickleball-Court-Management-System/backend/booking_debug.log',
-        `[DEBUG] ${new Date().toISOString()} - Booking: ${booking._id}, Transaction found: ${!!transaction}, status: ${transaction?.status}, transactionNo: ${transactionNo}\n`
-      );
-
       if (transaction) {
         transaction.status = "paid";
         if (transactionNo) {
           transaction.webhook_transaction_id = transactionNo;
         }
         await transaction.save({ session });
-        fs.appendFileSync('f:/pickleball/Pickleball-Court-Management-System/backend/booking_debug.log',
-          `[DEBUG] Saved transaction status to paid\n`
-        );
-      } else {
-        fs.appendFileSync('f:/pickleball/Pickleball-Court-Management-System/backend/booking_debug.log',
-          `[DEBUG] Transaction was NOT found!\n`
-        );
       }
 
       if (booking.status !== "holding") {
