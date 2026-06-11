@@ -14,6 +14,7 @@ const orderRoute = require("./routes/orderRoutes");
 const webhookRoute = require("./routes/webhookRoute");
 const tournamentRoute = require("./routes/tournamentsRoute");
 const sharedMatchRoute = require("./routes/sharedMatchesRoute");
+const reportRoute = require("./routes/reportRoutes");
 const app = express();
 
 // middlewares
@@ -48,6 +49,7 @@ app.use("/api/v1/orders", orderRoute);
 app.use("/api/v1/webhooks", webhookRoute);
 app.use("/api/v1/tournaments", tournamentRoute);
 app.use("/api/v1/shared-matches", sharedMatchRoute);
+app.use("/api/v1/reports", reportRoute);
 
 
 app.use("/api/v1/courts", courtRoutes)

@@ -25,6 +25,7 @@ const AdminBranchPage = lazy(() => import("../pages/admin/AdminBranchPage"));
 const AdminCourtsPage = lazy(() => import("../pages/admin/AdminCourtPage"));
 const AdminStaffPage = lazy(() => import("../pages/admin/AdminStaffPage"));
 const AdminUsersPage = lazy(() => import("../pages/admin/AdminUsersPage"));
+const AdminRevenuesPage = lazy(() => import("../pages/admin/AdminRevenuesPage"));
 const UITestPage = lazy(() => import("../pages/dev/UITestPage"));
 const UnauthorizedPage = lazy(() => import("../pages/error/UnauthorizedPage"));
 const NotFoundPage = lazy(() => import("../pages/error/NotFoundPage"));
@@ -140,6 +141,14 @@ const AppRouteContent = () => {
             element={
               <ProtectedRoute roles={["admin", "manager"]}>
                 <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/revenues"
+            element={
+              <ProtectedRoute roles={["admin", "staff", "manager"]}>
+                <AdminRevenuesPage />
               </ProtectedRoute>
             }
           />

@@ -10,6 +10,7 @@ const adminItems = [
   { label: "Chi nhánh", to: "/admin/branches" },
   { label: "Nhân viên", to: "/admin/staff" },
   { label: "Tất cả người dùng", to: "/admin/users" },
+  { label: "Doanh thu", to: "/admin/revenues" },
   { label: "Giá", to: "/pricing" },
   { label: "Giải đấu", to: "/tournaments" },
 ];
@@ -23,7 +24,7 @@ const AdminLayout = ({ children }) => {
 
   const allowedItems = adminItems.filter((item) => {
     if (userRole === "manager") {
-      return ["/home", "/admin/staff", "/admin/users"].includes(item.to);
+      return ["/home", "/admin/staff", "/admin/users", "/admin/revenues"].includes(item.to);
     }
     return true;
   });

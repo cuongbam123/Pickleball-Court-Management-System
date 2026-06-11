@@ -23,12 +23,12 @@ const { emitBookingChange } = require("../config/socket");
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
-  
+
   const filter = {
     is_deleted: false,
   };
 
-  if (date) {    
+  if (date) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -36,21 +36,21 @@ const getBookings = async (query, user) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     filter.start_time = {
-      $gte: startOfDay, 
-      $lte: endOfDay   
+      $gte: startOfDay,
+      $lte: endOfDay
     };
   }
-  
-  if (user_id) { 
-  filter.user_id = user_id;
-}
+
+  if (user_id) {
+    filter.user_id = user_id;
+  }
 
   if (user?.role === "staff" && user.branch_id) {
     filter.branch_id = user.branch_id;
   } else if (branch_id) {
     filter.branch_id = branch_id;
   }
-  if (status){
+  if (status) {
     filter.status = status;
   }
 
@@ -321,26 +321,28 @@ const holdBooking = async (body, user) => {
     let createdOrder = null;
     // dùng Replica Set
     await session.withTransaction(async () => {
-      const bufferMs = buffer_time * 60 * 1000;
-      const endWithNewBuffer = new Date(end.getTime() + bufferMs);
+      // const bufferMs = buffer_time * 60 * 1000;
+      // const endWithNewBuffer = new Date(end.getTime() + bufferMs);
       // xây dựng overlap
       const conflictBooking = await Booking.findOne({
         court_id,
         is_deleted: false,
         status: { $ne: "cancelled" },
-        $expr: {
-          $and: [
-            // start < end_time + buffer_time
-            {
-              $lt: [
-                start,
-                { $add: ["$end_time", { $multiply: ["$buffer_time", 60000] }] },
-              ],
-            },
-            // end > start_time
-            { $gt: [endWithNewBuffer, "$start_time"] },
-          ],
-        },
+        start_time: { $lte: end },
+        end_time: { $gte: start },
+        // $expr: {
+        //   $and: [
+        //     // start < end_time + buffer_time
+        //     {
+        //       $lt: [
+        //         start,
+        //         { $add: ["$end_time", { $multiply: ["$buffer_time", 60000] }] },
+        //       ],
+        //     },
+        //     // end > start_time
+        //     { $gt: [endWithNewBuffer, "$start_time"] },
+        //   ],
+        // },
       }).session(session);
 
       if (conflictBooking) {
@@ -520,6 +522,8 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
   console.log("vnp_Amount", vnp_Amount)
 
   try {
+    let isAlreadyConfirmed = false;
+
     await session.withTransaction(async () => {
       const booking = await Booking.findById(bookingId).session(session);
 
@@ -529,16 +533,12 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
 
       if (booking.deposit_amount !== vnp_Amount) {
         throw new Error("04");
-      } 
-
-      if (booking.status !== "holding") {
-        throw new Error("02");
       }
 
       // Cập nhật giao dịch PaymentTransaction sang paid
       const transaction = await PaymentTransaction.findOne({
         reference_type: "Booking",
-        reference_id: bookingId,
+        reference_id: booking._id,
       }).session(session);
 
       if (transaction) {
@@ -547,6 +547,11 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
           transaction.webhook_transaction_id = transactionNo;
         }
         await transaction.save({ session });
+      }
+
+      if (booking.status !== "holding") {
+        isAlreadyConfirmed = true;
+        return; // Thoát ra ngoài callback để commit session bình thường
       }
 
       booking.status = "deposited";
@@ -590,6 +595,9 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
     });
 
     emitBookingChange("update", booking);
+    if (isAlreadyConfirmed) {
+      throw new Error("02");
+    }
 
     return true;
   } catch (error) {
@@ -787,7 +795,7 @@ const cancelBooking = async (bookingId, reason, user) => {
       // cập nhật thông tin
       booking.status = "cancelled";
       booking.cancel_at = now;
-      booking.refund_status = "refunded";
+      booking.refund_status = isRefundable ? "refunded" : "none";
       booking.cancelled_by = user.userId;
       booking.hold_token = null;
       booking.expires_at = null;
@@ -901,7 +909,7 @@ const getAvaliadbleTimeSlots = async (courtId, date) => {
       (order) => order.booking_id.toString() === slot._id.toString(),
     );
 
-    const matchedRule = pricingRules.find(rule => 
+    const matchedRule = pricingRules.find(rule =>
       rule.start_time <= startTimeStr && rule.end_time > startTimeStr
     );
     return {
@@ -914,10 +922,11 @@ const getAvaliadbleTimeSlots = async (courtId, date) => {
     };
   });
 
-return {
-    booked_slots: formattedSlots, 
-    pricing_rules: pricingRules    
-  };};
+  return {
+    booked_slots: formattedSlots,
+    pricing_rules: pricingRules
+  };
+};
 
 module.exports = {
   getBookings,
