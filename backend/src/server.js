@@ -9,6 +9,7 @@ const expireTournamentPaymentsJob = require('./jobs/expireTournamentPaymentsJob'
 const autoRankJob = require('./jobs/autoRankJob');
 const tournamentCron = require("./jobs/tournamentCron");
 const revenueAggregationJob = require('./jobs/revenueAggregationJob');
+const expireSharedMatchesJob = require('./jobs/expireSharedMatchesJob');
 
 
 // dotenv.config();
@@ -29,6 +30,8 @@ const startServer = async () => {
         autoRankJob();
         tournamentCron();
         revenueAggregationJob();
+        expireSharedMatchesJob();
+
 
         const server = http.createServer(app);
         initSocket(server);
