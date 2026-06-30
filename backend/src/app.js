@@ -18,7 +18,7 @@ const reportRoute = require("./routes/reportRoutes");
 const app = express();
 
 // middlewares
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173" || "https://pickleball-court-management-system-2.onrender.com")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -56,7 +56,7 @@ app.use("/api/v1/courts", courtRoutes)
 app.use("/api/v1/products", productRoutes);
 
 app.get('/', (req, res) => {
-    res.send(' API Pickleball đang hoạt động!');
+  res.send(' API Pickleball đang hoạt động!');
 });
 
 app.use((req, res, next) => {

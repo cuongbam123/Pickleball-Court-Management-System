@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const querystring = require("qs");
 const { addMinutes } = require("date-fns");
 const { format, toZonedTime } = require("date-fns-tz");
+const telegramService = require("../utils/telegramService");
 
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 const SHARED_TICKET_PENDING_MINUTES = 10;
@@ -520,6 +521,8 @@ const confirmSharedTicketPayment = async (sharedTicketId, paidAmount) => {
       };
       paidTicket = ticket;
     });
+
+    telegramService.notifySharedTicketSuccess(paidTicket._id).catch(err => console.error('[Telegram]', err));
 
     return {
       ticket: paidTicket,
