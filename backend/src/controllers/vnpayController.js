@@ -8,6 +8,7 @@ const tournamentsService = require("../services/tournamentsService");
 const SharedTicket = require("../models/sharedTicket");
 const Booking = require("../models/bookings");
 const Order = require("../models/orders");
+const telegramService = require("../utils/telegramService");
 
 const VNPAY_FAILURE_REASONS = {
   "07": "Giao dịch bị nghi ngờ gian lận.",
@@ -360,6 +361,8 @@ const vnpayIpn = async (req, res) => {
       return res.status(200).json({ RspCode: "99", Message: "Unknown error" });
     }
   } else {
+    const failureReason = VNPAY_FAILURE_REASONS[responseCode] || `Mã lỗi: ${responseCode}`;
+    telegramService.notifyPaymentFailed(txnRef, vnp_Amount, failureReason).catch(err => console.error('[Telegram]', err));
     return res.status(200).json({ RspCode: "00", Message: "Transaction failed but noted" });
   }
 };

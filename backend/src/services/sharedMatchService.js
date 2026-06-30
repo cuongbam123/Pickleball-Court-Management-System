@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const querystring = require("qs");
 const { addMinutes } = require("date-fns");
 const { format, toZonedTime } = require("date-fns-tz");
+const telegramService = require("../utils/telegramService");
 
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 const SHARED_TICKET_PENDING_MINUTES = 10;
@@ -343,6 +344,23 @@ const buySharedMatchTicket = async (matchId, userId, body, req) => {
           "ERR_MATCH_FULL",
         );
       }
+      const booking = await Booking.findOne({
+        _id: sharedMatch.booking_id,
+        is_deleted: false,
+      })
+        .select("start_time")
+        .session(session);
+
+      if (!booking) {
+        throw createError("Không tìm thấy booking của ca ghép", 404);
+      }
+
+      if (booking.start_time <= new Date()) {
+        throw createError(
+          "Đã đến giờ bắt đầu, ca ghép này không còn nhận người chơi.",
+          400,
+        );
+      }
 
       const existingTicket = await SharedTicket.findOne({
         user_id: userId,
@@ -442,6 +460,34 @@ const confirmSharedTicketPayment = async (sharedTicketId, paidAmount) => {
       if (normalizedPaidAmount !== ticket.ticket_price) {
         throw new Error("04");
       }
+      const sharedMatch = await SharedMatch.findOne({
+        _id: ticket.shared_match_id,
+        is_deleted: false,
+      })
+        .select("booking_id")
+        .session(session);
+
+      if (!sharedMatch) {
+        throw createError("Sân ghép không tồn tại", 404);
+      }
+
+      const booking = await Booking.findOne({
+        _id: sharedMatch.booking_id,
+        is_deleted: false,
+      })
+        .select("start_time")
+        .session(session);
+
+      if (!booking) {
+        throw createError("Không tìm thấy booking của ca ghép", 404);
+      }
+
+      if (booking.start_time <= new Date()) {
+        throw createError(
+          "Đã đến giờ bắt đầu, không thể xác nhận thanh toán vé ghép.",
+          400,
+        );
+      }
 
       const paidMatch = await SharedMatch.findOneAndUpdate(
         {
@@ -475,6 +521,8 @@ const confirmSharedTicketPayment = async (sharedTicketId, paidAmount) => {
       };
       paidTicket = ticket;
     });
+
+    telegramService.notifySharedTicketSuccess(paidTicket._id).catch(err => console.error('[Telegram]', err));
 
     return {
       ticket: paidTicket,

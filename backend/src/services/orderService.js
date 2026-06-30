@@ -12,6 +12,7 @@ const AuditLog = require("../models/audit_logs");
 const PaymentTransaction = require("../models/payment_transactions");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const { emitBookingChange } = require("../config/socket");
+const telegramService = require("../utils/telegramService");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -301,6 +302,8 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount, transactionNo = nul
       },
     });
 
+    telegramService.notifyFinalPaymentSuccess(orderId).catch(err => console.error('[Telegram]', err));
+
     return true;
   } catch (error) {
     await session.abortTransaction();
@@ -430,6 +433,7 @@ const addPosItemsToOrder = async (orderId, items, user) => {
 
     return order;
   } catch (error) {
+    console.error("Error in addPosItemsToOrder:", error);
     await session.abortTransaction();
     throw error;
   } finally {
