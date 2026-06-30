@@ -12,6 +12,7 @@ const AuditLog = require("../models/audit_logs");
 const PaymentTransaction = require("../models/payment_transactions");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const { emitBookingChange } = require("../config/socket");
+const telegramService = require("../utils/telegramService");
 
 const TIME_ZONE = "Asia/Ho_Chi_Minh";
 
@@ -301,6 +302,8 @@ const confirmOrderFinalPayment = async (orderId, vnp_Amount, transactionNo = nul
       },
     });
 
+    telegramService.notifyFinalPaymentSuccess(orderId).catch(err => console.error('[Telegram]', err));
+
     return true;
   } catch (error) {
     await session.abortTransaction();
@@ -382,6 +385,8 @@ const checkoutOrder = async (orderId, payment_method, amount_received, user) => 
 };
 
 const addPosItemsToOrder = async (orderId, items, user) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const order = await Order.findById(orderId).session(session);
     if (!order) throw new Error("Không tìm thấy hóa đơn");
@@ -427,10 +432,15 @@ const addPosItemsToOrder = async (orderId, items, user) => {
 
     return order;
   } catch (error) {
-    await session.abortTransaction();
+    console.error("Error in addPosItemsToOrder:", error);
+    if (session) {
+      await session.abortTransaction();
+    }
     throw error;
   } finally {
-    session.endSession();
+    if (session) {
+      session.endSession();
+    }
   }
 };
 

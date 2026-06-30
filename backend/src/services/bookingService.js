@@ -20,6 +20,7 @@ const PaymentTransaction = require("../models/payment_transactions");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 const { emitBookingChange } = require("../config/socket");
+const telegramService = require("../utils/telegramService");
 
 const getBookings = async (query, user) => {
   const { branch_id, date, court_id, user_id, status, page = 1, limit = 100 } = query;
@@ -518,10 +519,11 @@ function sortObject(obj) {
 const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null) => {
   const session = await mongoose.startSession();
   console.log("vnp_Amount", vnp_Amount)
+  let booking = null;
 
   try {
     await session.withTransaction(async () => {
-      const booking = await Booking.findById(bookingId).session(session);
+      booking = await Booking.findById(bookingId).session(session);
 
       if (!booking) {
         throw new Error("01");
@@ -590,6 +592,7 @@ const confirmBookingDeposit = async (bookingId, vnp_Amount, transactionNo = null
     });
 
     emitBookingChange("update", booking);
+    telegramService.notifyDepositSuccess(bookingId).catch(err => console.error('[Telegram]', err));
 
     return true;
   } catch (error) {
@@ -841,6 +844,8 @@ const cancelBooking = async (bookingId, reason, user) => {
 
     if (cancelledBooking?.booking) {
       emitBookingChange("cancel", cancelledBooking.booking);
+      telegramService.notifyCancelBooking(cancelledBooking.booking, cancelledBooking.refund_action, reason)
+        .catch(err => console.error('[Telegram]', err));
     }
 
     return cancelledBooking;

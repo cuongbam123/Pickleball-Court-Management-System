@@ -6,6 +6,7 @@ const PaymentTransaction = require("../models/payment_transactions");
 const User = require("../models/users");
 const { buildVnpayUrl } = require("../utils/vnpayHelper");
 const mongoose = require("mongoose");
+const telegramService = require("../utils/telegramService");
 
 const TOURNAMENT_STATUSES = {
   OPEN_REGISTRATION: "open_registration",
@@ -983,6 +984,7 @@ const confirmTournamentPayment = async (participantId, vnpAmount, vnpTransaction
 
     await session.commitTransaction();
     session.endSession();
+    telegramService.notifyTournamentPaymentSuccess(participantId).catch(err => console.error('[Telegram]', err));
     return true;
   } catch (error) {
     await session.abortTransaction();
